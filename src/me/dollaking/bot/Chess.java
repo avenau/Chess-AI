@@ -1,4 +1,5 @@
 import com.github.bhlangonijr.chesslib.Board;
+import com.github.bhlangonijr.chesslib.Piece;
 import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
 import com.github.bhlangonijr.chesslib.move.Move;
@@ -7,8 +8,9 @@ import com.github.bhlangonijr.chesslib.move.MoveGeneratorException;
 import java.util.Scanner;
 
 public class Chess {
-    public static void main(String[] args) throws MoveGeneratorException {
-        Board board = new Board();
+
+    public static void main(String[] args) throws MoveGeneratorException, InterruptedException {
+       /* Board board = new Board();
         Scanner scanner = new Scanner(System.in);
         String input;
         Side botSide;
@@ -28,15 +30,18 @@ public class Chess {
         }
 
 
+
         while (!board.isDraw() && !board.isStaleMate() && !board.isInsufficientMaterial() && !board.isMated()){
             if (turn.toString().equalsIgnoreCase(player.toString())){
                 System.out.println("Choose your move:");
                 try {
-                    isLegal = board.doMove(stringToMove(scanner.nextLine()));
+                    isLegal = board.doMove(stringToMove(scanner.nextLine(), board));
                 } catch (NullPointerException e){
                     isLegal = false;
+                    e.printStackTrace();
                 } catch (IllegalArgumentException e){
                     isLegal = false;
+                    e.printStackTrace();
                 }
 
 
@@ -51,6 +56,8 @@ public class Chess {
 
                 System.out.println("Bots Moves to " + nextMove.toString() + "!");
                 isLegal = board.doMove(nextMove);
+               // System.out.println(board.toString());
+
             }
 
             if (!isLegal){
@@ -70,17 +77,24 @@ public class Chess {
             System.out.println(board.getSideToMove() + " got checkmated!");
         }
 
-        scanner.close();
+        scanner.close();*/
+        UCI.uciCommunication();
+
     }
 
-    public static Move stringToMove(String input){
+    public static Move stringToMove(String input, Board board){
         String current = input.substring(0,2).toUpperCase();
         String next = input.substring(2,4).toUpperCase();
 
         Square currentSquare = Square.valueOf(current);
         Square nextSquare = Square.valueOf(next);
+        Move move;
+        if (board.getSideToMove().value().equalsIgnoreCase("BLACK")){
+            move = new Move(currentSquare, nextSquare, Piece.BLACK_QUEEN);
+        } else {
+            move = new Move(currentSquare, nextSquare, Piece.WHITE_QUEEN);
+        }
 
-        Move move = new Move(currentSquare, nextSquare);
         return move;
     }
 

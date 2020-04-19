@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="src" path="src/me/dollaking/bot"/>
+	<classpathentry kind="lib" path="out/artifacts/Aven_Engine_jar/AvenEngine.jar"/>
+	<classpathentry kind="output" path="target/classes"/>
+</classpath>
