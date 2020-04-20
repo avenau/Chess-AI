@@ -7,20 +7,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="282acde4-aa68-4104-9297-754be3588a24" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/Aven Engine.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/artifacts/Aven_Engine_jar.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/jarRepositories.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/uiDesigner.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.classpath" beforeDir="false" afterPath="$PROJECT_DIR$/.classpath" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/artifacts/Aven_Engine_jar.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.project" beforeDir="false" afterPath="$PROJECT_DIR$/.project" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/me/dollaking/bot/Chess.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/me/dollaking/bot/Chess.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/me/dollaking/bot/ChessBot.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/me/dollaking/bot/ChessBot.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/me/dollaking/bot/MinimaxPruning.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/me/dollaking/bot/MinimaxPruning.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/Chess.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/Chess.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/ChessBot.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/ChessBot.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/META-INF/Aven Engine.kotlin_module" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/MinimaxPruning.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/MinimaxPruning.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/me/dollaking/bot/UCI.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/me/dollaking/bot/UCI.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/Chess.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/ChessBot.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/MinimaxPruning.class" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -47,7 +47,7 @@
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
-    <property name="project.structure.last.edited" value="Artifacts" />
+    <property name="project.structure.last.edited" value="Modules" />
     <property name="project.structure.proportion" value="0.15" />
     <property name="project.structure.side.proportion" value="0.2" />
     <property name="settings.editor.selected.configurable" value="reference.projectsettings.compiler.javacompiler" />
@@ -75,6 +75,10 @@
     <servers />
   </component>
   <component name="WindowStateProjectService">
+    <state x="657" y="138" key="#Chess" timestamp="1587293359907">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="657" y="138" key="#Chess/0.0.1920.1040@0.0.1920.1040" timestamp="1587293359907" />
     <state x="552" y="177" key="#Project_Structure" timestamp="1586319209360">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
@@ -87,18 +91,18 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="1209" y="322" key="#com.intellij.fileTypes.FileTypeChooser/0.0.1920.1040@0.0.1920.1040" timestamp="1586242832196" />
-    <state x="1245" y="228" key="#com.intellij.ide.util.MemberChooser" timestamp="1586250942381">
+    <state x="1245" y="228" key="#com.intellij.ide.util.MemberChooser" timestamp="1587355477870">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="1245" y="228" key="#com.intellij.ide.util.MemberChooser/0.0.1920.1040@0.0.1920.1040" timestamp="1586250942381" />
+    <state x="1245" y="228" key="#com.intellij.ide.util.MemberChooser/0.0.1920.1040@0.0.1920.1040" timestamp="1587355477870" />
     <state x="1103" y="303" key="#com.intellij.ide.util.TreeClassChooserDialog" timestamp="1587279788129">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="1103" y="303" key="#com.intellij.ide.util.TreeClassChooserDialog/0.0.1920.1040@0.0.1920.1040" timestamp="1587279788129" />
-    <state x="1180" y="260" key="FileChooserDialogImpl" timestamp="1587266412723">
+    <state x="1180" y="260" key="FileChooserDialogImpl" timestamp="1587293480628">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="1180" y="260" key="FileChooserDialogImpl/0.0.1920.1040@0.0.1920.1040" timestamp="1587266412723" />
+    <state x="1180" y="260" key="FileChooserDialogImpl/0.0.1920.1040@0.0.1920.1040" timestamp="1587293480628" />
     <state width="900" height="236" key="GridCell.Tab.0.bottom" timestamp="1587280420581">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
@@ -115,10 +119,10 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="900" height="236" key="GridCell.Tab.0.right/0.0.1920.1040@0.0.1920.1040" timestamp="1587280420581" />
-    <state x="880" y="99" key="SettingsEditor" timestamp="1587280845930">
+    <state x="880" y="99" key="SettingsEditor" timestamp="1587293487685">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="880" y="99" key="SettingsEditor/0.0.1920.1040@0.0.1920.1040" timestamp="1587280845930" />
+    <state x="880" y="99" key="SettingsEditor/0.0.1920.1040@0.0.1920.1040" timestamp="1587293487685" />
     <state x="685" y="180" key="new project wizard" timestamp="1587216772556">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>

@@ -1,3 +1,5 @@
+package me.dollaking.bot;
+
 import com.github.bhlangonijr.chesslib.Board;
 
 import java.util.*;
@@ -134,7 +136,12 @@ public class UCI {
     public static void inputGo(Board board) throws MoveGeneratorException, InterruptedException {
         MinimaxPruning bot = new MinimaxPruning(board.getSideToMove());
         Move bestMove = bot.calculateNextMove(board);
-        System.out.println("bestmove " + bestMove.toString());
+        if (bestMove == null){
+            System.out.println("bestmove 0000");
+        } else {
+            System.out.println("bestmove " + bestMove.toString());
+        }
+
     }
     public static void inputQuit() {
         System.exit(0);
