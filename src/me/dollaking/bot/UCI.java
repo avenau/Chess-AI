@@ -33,7 +33,7 @@ public class UCI {
             else if (inputString.startsWith("position"))
             {
                 board = inputPosition(inputString, board);
-                //System.out.println(board.toString());
+
             }
             else if (inputString.startsWith("go"))
             {
@@ -135,7 +135,12 @@ public class UCI {
     }
     public static void inputGo(Board board) throws MoveGeneratorException, InterruptedException {
         MinimaxPruning bot = new MinimaxPruning(board.getSideToMove());
+
+        long startTime = System.nanoTime();
         Move bestMove = bot.calculateNextMove(board);
+        long endTime = System.nanoTime();
+        System.out.println("info Took "+(endTime - startTime)/1000000000 + " seconds");
+
         if (bestMove == null){
             System.out.println("bestmove 0000");
         } else {

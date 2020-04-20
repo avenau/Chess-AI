@@ -67,6 +67,8 @@ public class StandardStrategy implements Heuristic{
         }
         return total;
     }
+
+
 }
 
 

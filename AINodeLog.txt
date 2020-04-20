@@ -1,0 +1,13 @@
+36389 a2a4 alphabeta 5 depth
+32132 a2a4 alphabeta capturePieceValue 5 depth
+22017 a2a4 alphabeta transposition table 5 depth
+
+a2a4 alphabeta transposition table 6 depth
+info Number of Nodes Visited: 151755
+info Took 4 seconds
+bestmove a7a5
+
+a2a4 alphabeta  capturePieceValue 6 depth
+info Number of Nodes Visited: 300379
+info Took 7 seconds
+bestmove a7a5
