@@ -15,15 +15,22 @@ public class MinimaxPruning implements ChessBot {
     public Side side;
     private int nodeCount;
     private Move bestNextMove;
-    private StandardStrategy heuristic;
+    private Heuristic heuristic;
     private ArrayList<Zobrist> zobList;
     private HashMap<Board, Integer> tranpositionList;
+    private long startTime;
+    private int maxDepth;
+    private long timeLimit;
+    private long endTime;
 
     public MinimaxPruning (Side side){
         this.side = side;
+        //Change your heuristic HERE
         this.heuristic = new StandardStrategy(side);
+
         this.zobList = new ArrayList<Zobrist>();
         this.tranpositionList = new HashMap<Board, Integer>();
+        this.timeLimit = 15000;
     }
 
     private Zobrist getZobBySquare(Square square){
@@ -48,7 +55,8 @@ public class MinimaxPruning implements ChessBot {
             counter = zob.generateRandom(counter);
 
         }*/
-
+        this.startTime = System.currentTimeMillis();
+        this.endTime = startTime + timeLimit;
 
         Move nextMove = bestMove(board);
 
@@ -62,6 +70,7 @@ public class MinimaxPruning implements ChessBot {
         nodeCount = 0;
         int max = Integer.MIN_VALUE;
         minimax(0, Integer.MIN_VALUE, Integer.MAX_VALUE, board.getSideToMove(), board);
+        System.out.println("info Depth Searched: " + maxDepth);
         System.out.println("info Number of Nodes Visited: " + nodeCount);
 
         return bestNextMove;
@@ -103,17 +112,30 @@ public class MinimaxPruning implements ChessBot {
 
 
 
+
+
     int minimax(int depth, int alpha, int beta, Side side, Board board) throws MoveGeneratorException, InterruptedException {
 
-        int totalValue = 0;
+        if (System.currentTimeMillis() >= this.endTime && depth >= 6){
+            if (depth > maxDepth){
+                maxDepth = depth;
+            }
+            int totalValue = 0;
 
-        totalValue = heuristic.calculateScore(board);
-
-
-        if (depth == 6 || totalValue >= 10000 || totalValue <= -10000){
-
+            totalValue = heuristic.calculateScore(board);
             return totalValue;
+        } else if (board.isDraw() || board.isMated() || board.isStaleMate()){
+            if (depth > maxDepth){
+                maxDepth = depth;
+            }
+            int totalValue = 0;
+
+            totalValue = heuristic.calculateScore(board);
+            return totalValue;
+
         }
+
+
         MoveList moveList = MoveGenerator.generateLegalMoves(board);
         Collections.sort(moveList, new sortByCaptureValue(board));
 

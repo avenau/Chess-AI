@@ -1,13 +1,10 @@
 package me.dollaking.bot;
 
-import com.github.bhlangonijr.chesslib.Board;
+import com.github.bhlangonijr.chesslib.*;
 
 import java.util.*;
 
 import com.github.bhlangonijr.chesslib.Board;
-import com.github.bhlangonijr.chesslib.Piece;
-import com.github.bhlangonijr.chesslib.Side;
-import com.github.bhlangonijr.chesslib.Square;
 import com.github.bhlangonijr.chesslib.move.Move;
 import com.github.bhlangonijr.chesslib.move.MoveGeneratorException;
 
@@ -134,7 +131,7 @@ public class UCI {
         return move;
     }
     public static void inputGo(Board board) throws MoveGeneratorException, InterruptedException {
-        MinimaxPruning bot = new MinimaxPruning(board.getSideToMove());
+        ChessBot bot = new MinimaxPruning(board.getSideToMove());
 
         long startTime = System.nanoTime();
         Move bestMove = bot.calculateNextMove(board);
