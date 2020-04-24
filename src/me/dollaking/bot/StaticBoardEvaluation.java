@@ -1,9 +1,11 @@
 package me.dollaking.bot;
 
-import com.github.bhlangonijr.chesslib.*;
+import com.github.bhlangonijr.chesslib.Board;
+import com.github.bhlangonijr.chesslib.Piece;
+import com.github.bhlangonijr.chesslib.Side;
+import com.github.bhlangonijr.chesslib.Square;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 public class StaticBoardEvaluation implements Heuristic{

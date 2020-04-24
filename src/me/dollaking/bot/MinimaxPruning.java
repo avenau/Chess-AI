@@ -18,10 +18,13 @@ public class MinimaxPruning implements ChessBot {
     private Heuristic heuristic;
     private ArrayList<Zobrist> zobList;
     private HashMap<Board, Integer> tranpositionList;
+    private HashMap<Board, Integer> enemyTranpositionList;
     private long startTime;
-    private int maxDepth;
+    private long maxDepth;
     private long timeLimit;
     private long endTime;
+    private long maxValue;
+   //private HashMap<Integer, MoveHistoryEntry> bestMoveHistory;
 
     public MinimaxPruning (Side side){
         this.side = side;
@@ -30,7 +33,9 @@ public class MinimaxPruning implements ChessBot {
 
         this.zobList = new ArrayList<Zobrist>();
         this.tranpositionList = new HashMap<Board, Integer>();
-        this.timeLimit = 15000;
+        this.enemyTranpositionList = new HashMap<Board, Integer>();
+        this.timeLimit = 10000;
+        //this.bestMoveHistory = new HashMap<Integer, MoveHistoryEntry>();
     }
 
     private Zobrist getZobBySquare(Square square){
@@ -55,8 +60,7 @@ public class MinimaxPruning implements ChessBot {
             counter = zob.generateRandom(counter);
 
         }*/
-        this.startTime = System.currentTimeMillis();
-        this.endTime = startTime + timeLimit;
+
 
         Move nextMove = bestMove(board);
 
@@ -68,9 +72,22 @@ public class MinimaxPruning implements ChessBot {
     Move bestMove(Board board) throws MoveGeneratorException, InterruptedException {
         Move move = null;
         nodeCount = 0;
-        int max = Integer.MIN_VALUE;
-        minimax(0, Integer.MIN_VALUE, Integer.MAX_VALUE, board.getSideToMove(), board);
-        System.out.println("info Depth Searched: " + maxDepth);
+        int depth = 6;
+        this.startTime = System.currentTimeMillis();
+        this.endTime = startTime + timeLimit;
+        //System.out.println("Start: " + this.startTime + " End: " + this.endTime);
+        while (this.startTime <= this.endTime){
+            this.tranpositionList = new HashMap<Board, Integer>();
+            this.enemyTranpositionList = new HashMap<Board, Integer>();
+            System.out.println("info: Searching depth " + depth);
+            minimax(0, depth, Integer.MIN_VALUE, Integer.MAX_VALUE, board.getSideToMove(), board);
+            System.out.println("info: Value " + this.maxValue);
+            System.out.println("info: Move " + this.bestNextMove.toString());
+            depth++;
+            this.startTime = System.currentTimeMillis();
+        }
+
+        //System.out.println("info Depth Searched: " + maxDepth);
         System.out.println("info Number of Nodes Visited: " + nodeCount);
 
         return bestNextMove;
@@ -114,22 +131,14 @@ public class MinimaxPruning implements ChessBot {
 
 
 
-    int minimax(int depth, int alpha, int beta, Side side, Board board) throws MoveGeneratorException, InterruptedException {
+    int minimax(int depth, int boundDepth, int alpha, int beta, Side side, Board board) throws MoveGeneratorException, InterruptedException {
 
-        if (System.currentTimeMillis() >= this.endTime && depth >= 6){
+        if (depth == boundDepth || board.isDraw() || board.isMated() || board.isStaleMate()){
             if (depth > maxDepth){
                 maxDepth = depth;
             }
             int totalValue = 0;
-
-            totalValue = heuristic.calculateScore(board);
-            return totalValue;
-        } else if (board.isDraw() || board.isMated() || board.isStaleMate()){
-            if (depth > maxDepth){
-                maxDepth = depth;
-            }
-            int totalValue = 0;
-
+            //System.out.println("On " + board.getSideToMove().value());
             totalValue = heuristic.calculateScore(board);
             return totalValue;
 
@@ -139,7 +148,19 @@ public class MinimaxPruning implements ChessBot {
         MoveList moveList = MoveGenerator.generateLegalMoves(board);
         Collections.sort(moveList, new sortByCaptureValue(board));
 
+        /*try {
+            if (board.isMoveLegal(bestMoveHistory.get(depth).getMove(), true)){
+                moveList.add(0, bestMoveHistory.get(depth).getMove());
+
+            }
+        } catch (RuntimeException e){
+            //System.out.println("ERROR");
+        }*/
+
         if (board.getSideToMove().value().equalsIgnoreCase(this.side.value())){
+            if (this.bestNextMove != null && depth == 0){
+                moveList.add(0, this.bestNextMove);
+            }
             Move other = null;
             for (Move temp : moveList){
                 board.doMove(temp);
@@ -149,7 +170,7 @@ public class MinimaxPruning implements ChessBot {
                     currentScore = tranpositionList.get(board);
                 } else {
                     nodeCount++;
-                    currentScore = minimax(depth + 1, alpha, beta, board.getSideToMove(), board);
+                    currentScore = minimax(depth + 1, boundDepth, alpha, beta, board.getSideToMove(), board);
                     tranpositionList.put(board, currentScore);
                 }
 
@@ -166,8 +187,18 @@ public class MinimaxPruning implements ChessBot {
             }
             if (depth == 0){
                 bestNextMove = other;
+                this.maxValue = alpha;
+                //bestMoveHistory.put(depth, new MoveHistoryEntry(other, alpha));
+            } /*else {
+                if (bestMoveHistory.get(depth) != null){
+                    if (bestMoveHistory.get(depth).getScore() < alpha){
+                        bestMoveHistory.put(depth, new MoveHistoryEntry(other, alpha));
+                    }
+                } else {
+                    bestMoveHistory.put(depth, new MoveHistoryEntry(other, alpha));
+                }
 
-            }
+            }*/
             return alpha;
 
         } else {
@@ -175,12 +206,12 @@ public class MinimaxPruning implements ChessBot {
                 board.doMove(temp);
                 int currentScore;
 
-                if (tranpositionList.containsKey(board)){
-                    currentScore = tranpositionList.get(board);
+                if (enemyTranpositionList.containsKey(board)){
+                    currentScore = enemyTranpositionList.get(board);
                 } else {
                     nodeCount++;
-                    currentScore = minimax(depth + 1, alpha, beta, board.getSideToMove(), board);
-                    tranpositionList.put(board, currentScore);
+                    currentScore = minimax(depth + 1, boundDepth, alpha, beta, board.getSideToMove(), board);
+                    enemyTranpositionList.put(board, currentScore);
                 }
 
                 board.undoMove();

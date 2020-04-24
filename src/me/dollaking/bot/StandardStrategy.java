@@ -12,7 +12,9 @@ public class StandardStrategy implements Heuristic{
     @Override
     public int calculateScore(Board board) {
         int total = 0;
+        //System.out.println("Current Side: " + this.side.value());
         if (board.getSideToMove().value().equalsIgnoreCase("black")){
+            //System.out.println("Chosen: black\n");
             total = total + board.getPieceLocation(Piece.BLACK_BISHOP).size() * 3;
             total = total + board.getPieceLocation(Piece.BLACK_KNIGHT).size() * 3;
             total = total + board.getPieceLocation(Piece.BLACK_PAWN).size();
@@ -28,6 +30,7 @@ public class StandardStrategy implements Heuristic{
             }
 
         } else {
+            //System.out.println("Chosen: white\n");
             total = total - board.getPieceLocation(Piece.BLACK_BISHOP).size() * 3;
             total = total - board.getPieceLocation(Piece.BLACK_KNIGHT).size() * 3;
             total = total - board.getPieceLocation(Piece.BLACK_PAWN).size();
