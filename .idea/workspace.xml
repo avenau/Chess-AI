@@ -8,7 +8,8 @@
   <component name="ChangeListManager">
     <list default="true" id="282acde4-aa68-4104-9297-754be3588a24" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/me/dollaking/bot/Chess.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/me/dollaking/bot/Chess.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/me/dollaking/bot/ChessBot.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/me/dollaking/bot/ChessBot.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/me/dollaking/bot/Heuristic.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/me/dollaking/bot/Heuristic.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/me/dollaking/bot/MinimaxPruning.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/me/dollaking/bot/MinimaxPruning.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/me/dollaking/bot/StandardStrategy.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/me/dollaking/bot/StandardStrategy.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/me/dollaking/bot/StaticBoardEvaluation.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/me/dollaking/bot/StaticBoardEvaluation.java" afterDir="false" />
@@ -38,6 +39,7 @@
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
+    <property name="extract.method.default.visibility" value="private" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$/../ChessMaster" />
     <property name="project.structure.last.edited" value="SDKs" />
     <property name="project.structure.proportion" value="0.15" />
@@ -104,26 +106,30 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="1180" y="260" key="FileChooserDialogImpl/0.0.1920.1040@0.0.1920.1040" timestamp="1587454894576" />
-    <state width="900" height="214" key="GridCell.Tab.0.bottom" timestamp="1587744541929">
+    <state width="1876" height="213" key="GridCell.Tab.0.bottom" timestamp="1587967534537">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="900" height="214" key="GridCell.Tab.0.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1587744541929" />
-    <state width="900" height="214" key="GridCell.Tab.0.center" timestamp="1587744541928">
+    <state width="1876" height="213" key="GridCell.Tab.0.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1587967534537" />
+    <state width="1876" height="213" key="GridCell.Tab.0.center" timestamp="1587967534537">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="900" height="214" key="GridCell.Tab.0.center/0.0.1920.1040@0.0.1920.1040" timestamp="1587744541928" />
-    <state width="900" height="214" key="GridCell.Tab.0.left" timestamp="1587744541928">
+    <state width="1876" height="213" key="GridCell.Tab.0.center/0.0.1920.1040@0.0.1920.1040" timestamp="1587967534537" />
+    <state width="1876" height="213" key="GridCell.Tab.0.left" timestamp="1587967534537">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="900" height="214" key="GridCell.Tab.0.left/0.0.1920.1040@0.0.1920.1040" timestamp="1587744541928" />
-    <state width="900" height="214" key="GridCell.Tab.0.right" timestamp="1587744541928">
+    <state width="1876" height="213" key="GridCell.Tab.0.left/0.0.1920.1040@0.0.1920.1040" timestamp="1587967534537" />
+    <state width="1876" height="213" key="GridCell.Tab.0.right" timestamp="1587967534537">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="900" height="214" key="GridCell.Tab.0.right/0.0.1920.1040@0.0.1920.1040" timestamp="1587744541928" />
+    <state width="1876" height="213" key="GridCell.Tab.0.right/0.0.1920.1040@0.0.1920.1040" timestamp="1587967534537" />
     <state x="880" y="99" key="SettingsEditor" timestamp="1587437179978">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="880" y="99" key="SettingsEditor/0.0.1920.1040@0.0.1920.1040" timestamp="1587437179978" />
+    <state x="1170" y="269" key="extract.method.dialog" timestamp="1587965420067">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="1170" y="269" key="extract.method.dialog/0.0.1920.1040@0.0.1920.1040" timestamp="1587965420067" />
     <state x="685" y="180" key="new project wizard" timestamp="1587216772556">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>

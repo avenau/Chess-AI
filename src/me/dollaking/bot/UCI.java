@@ -8,7 +8,9 @@ import com.github.bhlangonijr.chesslib.move.MoveGeneratorException;
 
 import java.util.Scanner;
 
-
+/**
+ * UCI Protocol
+ */
 public class UCI {
     static String ENGINENAME="AvenEngine";
     public static void uciCommunication() throws MoveGeneratorException, InterruptedException {

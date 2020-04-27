@@ -2,6 +2,10 @@ package me.dollaking.bot;
 
 import com.github.bhlangonijr.chesslib.*;
 
+/**
+ * Standard Strategy, just calculates how many pieces the board has and if the game has ended
+ */
+
 public class StandardStrategy implements Heuristic{
     //Side of the bot
     private Side side;
@@ -9,8 +13,14 @@ public class StandardStrategy implements Heuristic{
         this.side = side;
     }
 
+    /**
+     * Calculate the score of current board
+     * @param board The board that you want evaluated
+     * @param depth The current depth of the minimax algorithm when this is called
+     * @return The score of the board
+     */
     @Override
-    public int calculateScore(Board board) {
+    public int calculateScore(Board board, int depth) {
         int total = 0;
         //System.out.println("Current Side: " + this.side.value());
         if (board.getSideToMove().value().equalsIgnoreCase("black")){
