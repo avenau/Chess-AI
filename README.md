@@ -4,7 +4,7 @@
 
 Install these before running the project:
 
-- Java 11
+- Java 21
 - Maven
 - Node.js
 - npm
