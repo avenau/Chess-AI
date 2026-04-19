@@ -1,0 +1,415 @@
+import { useEffect, useEffectEvent, useRef } from 'react'
+import axios from 'axios'
+import { Chess } from 'chess.js'
+import { Chessboard } from 'react-chessboard'
+import {
+  Button,
+  Grid,
+  Paper,
+  Stack,
+  Typography,
+} from '@mui/material'
+import {
+  chessboardActions,
+  chessboardStore,
+  INITIAL_FEN,
+  useChessboardSelector,
+} from '../state/ChessboardState'
+import ChessGameSetupModal from './ChessGameSetupModal'
+
+function safeGameFromFen(fen) {
+  return new Chess(fen)
+}
+
+function extractNextFen(payload, currentFen) {
+  const targetSquare = payload?.nextMove?.target
+  const promotion = payload?.nextMove?.promotion
+
+  if (!targetSquare) {
+    return null
+  }
+
+  const game = safeGameFromFen(currentFen)
+  const moves = game.moves({ verbose: true })
+  const matchingMove = moves.find(
+    (move) => move.to === targetSquare && (!promotion || move.promotion === promotion),
+  )
+
+  if (!matchingMove) {
+    return null
+  }
+
+  const result = game.move({
+    from: matchingMove.from,
+    to: matchingMove.to,
+    promotion: matchingMove.promotion ?? promotion ?? 'q',
+  })
+
+  return result
+    ? {
+        fen: game.fen(),
+        move: result,
+      }
+    : null
+}
+
+export default function ChessboardPanel() {
+  const {
+    fen,
+    status,
+    isThinking,
+    lastMove,
+    requestBody,
+    gameMode,
+    playerColor,
+    setupOpen,
+  } = useChessboardSelector(
+    (state) => state,
+  )
+  const autoRequestedFenRef = useRef(null)
+  const turn = fen.split(' ')[1]
+  const turnColor = turn === 'w' ? 'white' : 'black'
+  const isPlayersTurn = gameMode === 'bot' ? playerColor === turnColor : true
+
+  const boardOptions = {
+    position: fen.split(' ')[0],
+    allowDragging: !setupOpen && !isThinking,
+    canDragPiece: ({ piece }) => {
+      if (setupOpen || isThinking || !piece) {
+        return false
+      }
+
+      const pieceColor = piece.pieceType.startsWith('w') ? 'white' : 'black'
+
+      if (gameMode === 'bot') {
+        return pieceColor === playerColor && pieceColor === turnColor
+      }
+
+      return pieceColor === turnColor
+    },
+    onPieceDrop: ({ sourceSquare, targetSquare }) => {
+      if (!targetSquare || !isPlayersTurn) {
+        return false
+      }
+
+      const nextGame = safeGameFromFen(fen)
+      const move = nextGame.move({
+        from: sourceSquare,
+        to: targetSquare,
+        promotion: 'q',
+      })
+
+      if (!move) {
+        chessboardStore.dispatch(
+          chessboardActions.setStatus('Illegal move. Try a legal move on the board.'),
+        )
+        return false
+      }
+
+      const nextFen = nextGame.fen()
+      chessboardStore.dispatch(chessboardActions.setFen(nextFen))
+      chessboardStore.dispatch(chessboardActions.setLastMove(`${move.from}-${move.to}`))
+      chessboardStore.dispatch(
+        chessboardActions.setRequestBody(JSON.stringify({ fen: nextFen }, null, 2)),
+      )
+      chessboardStore.dispatch(
+        chessboardActions.setStatus(
+          `Moved ${move.piece.toUpperCase()} from ${move.from} to ${move.to}.`,
+        ),
+      )
+
+      return true
+    },
+  }
+
+  const requestNextMove = useEffectEvent(async ({ automatic = false } = {}) => {
+    chessboardStore.dispatch(chessboardActions.setIsThinking(true))
+    chessboardStore.dispatch(
+      chessboardActions.setStatus(
+        automatic ? 'Requesting bot move from /get-next-move...' : 'Requesting next move from /get-next-move...',
+      ),
+    )
+
+    try {
+      const response = await axios.post(
+        '/get-next-move',
+        { fen },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      )
+
+      const payload = response.data
+      const nextMoveResult = extractNextFen(payload, fen)
+
+      if (!nextMoveResult) {
+        chessboardStore.dispatch(
+          chessboardActions.setStatus(
+            'Received a response, but it did not contain a usable move or FEN yet.',
+          ),
+        )
+        return
+      }
+
+      chessboardStore.dispatch(chessboardActions.setFen(nextMoveResult.fen))
+      chessboardStore.dispatch(
+        chessboardActions.setLastMove(`${nextMoveResult.move.from}-${nextMoveResult.move.to}`),
+      )
+      chessboardStore.dispatch(
+        chessboardActions.setRequestBody(JSON.stringify({ fen: nextMoveResult.fen }, null, 2)),
+      )
+      chessboardStore.dispatch(
+        chessboardActions.setStatus(
+          automatic
+            ? `Bot moved ${nextMoveResult.move.piece.toUpperCase()} from ${nextMoveResult.move.from} to ${nextMoveResult.move.to}.`
+            : 'Applied the backend move to the board.',
+        ),
+      )
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        chessboardStore.dispatch(
+          chessboardActions.setStatus(
+            error.response?.data?.error ?? error.message ?? 'Request failed.',
+          ),
+        )
+      } else {
+        chessboardStore.dispatch(
+          chessboardActions.setStatus(
+            error instanceof Error ? error.message : 'Request failed.',
+          ),
+        )
+      }
+    } finally {
+      chessboardStore.dispatch(chessboardActions.setIsThinking(false))
+    }
+  })
+
+  useEffect(() => {
+    if (setupOpen) {
+      autoRequestedFenRef.current = null
+      return
+    }
+
+    if (gameMode !== 'bot' || isThinking || isPlayersTurn) {
+      return
+    }
+
+    if (autoRequestedFenRef.current === fen) {
+      return
+    }
+
+    autoRequestedFenRef.current = fen
+    requestNextMove({ automatic: true })
+  }, [fen, gameMode, isPlayersTurn, isThinking, requestNextMove, setupOpen])
+
+  function resetBoard() {
+    autoRequestedFenRef.current = null
+    chessboardStore.dispatch(chessboardActions.resetChessboard())
+  }
+
+  function startGame() {
+    if (!gameMode) {
+      return
+    }
+
+    autoRequestedFenRef.current = null
+    chessboardStore.dispatch(chessboardActions.resetChessboard())
+    chessboardStore.dispatch(chessboardActions.setGameMode(gameMode))
+    chessboardStore.dispatch(chessboardActions.setPlayerColor(playerColor))
+    chessboardStore.dispatch(chessboardActions.setSetupOpen(false))
+    chessboardStore.dispatch(
+      chessboardActions.setStatus(
+        gameMode === 'bot'
+          ? `Game started. You are playing as ${playerColor}.`
+          : 'Two-player game started.',
+      ),
+    )
+  }
+
+  return (
+    <>
+      <ChessGameSetupModal
+        open={setupOpen}
+        gameMode={gameMode}
+        playerColor={playerColor}
+        onGameModeChange={(value) => {
+          chessboardStore.dispatch(chessboardActions.setGameMode(value))
+        }}
+        onPlayerColorChange={(value) => {
+          chessboardStore.dispatch(chessboardActions.setPlayerColor(value))
+        }}
+        onStart={startGame}
+      />
+
+      <Grid container spacing={{ xs: 2, md: 3 }}>
+        <Grid size={12}>
+        <Paper
+          elevation={0}
+          sx={{
+            p: { xs: 2, md: 3 },
+            borderRadius: 2,
+            border: '1px solid',
+            borderColor: 'rgba(66, 44, 21, 0.12)',
+            backgroundColor: 'rgba(255, 250, 244, 0.76)',
+            backdropFilter: 'blur(16px)',
+          }}
+        >
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, sm: 'auto' }}>
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={() => requestNextMove()}
+                disabled={isThinking || setupOpen || (gameMode === 'bot' && isPlayersTurn)}
+                sx={{
+                  minHeight: 52,
+                  px: 3,
+                  borderRadius: 2,
+                  bgcolor: '#1f5b4d',
+                  '&:hover': { bgcolor: '#17463b' },
+                }}
+              >
+                {isThinking ? 'Waiting for move...' : 'Get Next Move'}
+              </Button>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 'auto' }}>
+              <Button
+                fullWidth
+                variant="outlined"
+                onClick={resetBoard}
+                sx={{
+                  minHeight: 52,
+                  px: 3,
+                  borderRadius: 2,
+                  borderColor: 'rgba(46, 36, 25, 0.16)',
+                  color: '#2e2419',
+                }}
+              >
+                Reset Board
+              </Button>
+            </Grid>
+          </Grid>
+        </Paper>
+        </Grid>
+
+        <Grid size={{ xs: 12, lg: 7 }}>
+        <Paper
+          elevation={0}
+          sx={{
+            p: { xs: 2, md: 3 },
+            borderRadius: 2.5,
+            border: '1px solid',
+            borderColor: 'rgba(66, 44, 21, 0.12)',
+            backgroundColor: 'rgba(255, 250, 244, 0.76)',
+            backdropFilter: 'blur(16px)',
+            height: '100%',
+          }}
+        >
+          <Stack alignItems="center">
+            <Stack sx={{ width: '100%', maxWidth: 620 }}>
+              <Chessboard options={boardOptions} />
+            </Stack>
+          </Stack>
+        </Paper>
+        </Grid>
+
+        <Grid size={{ xs: 12, lg: 5 }}>
+        <Grid container spacing={2}>
+          <Grid size={12}>
+            <Paper
+              elevation={0}
+              sx={{
+                p: 3,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'rgba(66, 44, 21, 0.12)',
+                backgroundColor: 'rgba(255, 250, 244, 0.76)',
+              }}
+            >
+              <Stack spacing={1.5}>
+                <Typography variant="overline" sx={{ color: '#8b5e34', fontWeight: 700 }}>
+                  Current FEN
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", monospace',
+                    color: '#32261c',
+                    overflowX: 'auto',
+                  }}
+                >
+                  {fen}
+                </Typography>
+              </Stack>
+            </Paper>
+          </Grid>
+
+          <Grid size={12}>
+            <Paper
+              elevation={0}
+              sx={{
+                p: 3,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'rgba(66, 44, 21, 0.12)',
+                backgroundColor: 'rgba(255, 250, 244, 0.76)',
+              }}
+            >
+              <Stack spacing={1.5}>
+                <Typography variant="overline" sx={{ color: '#8b5e34', fontWeight: 700 }}>
+                  Request Payload
+                </Typography>
+                <Typography
+                  component="pre"
+                  variant="body2"
+                  sx={{
+                    m: 0,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", monospace',
+                    color: '#32261c',
+                  }}
+                >
+                  {requestBody || JSON.stringify({ fen }, null, 2)}
+                </Typography>
+              </Stack>
+            </Paper>
+          </Grid>
+
+          <Grid size={12}>
+            <Paper
+              elevation={0}
+              sx={{
+                p: 3,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'rgba(66, 44, 21, 0.12)',
+                backgroundColor: 'rgba(255, 250, 244, 0.76)',
+              }}
+            >
+              <Stack spacing={1.5}>
+                <Typography variant="overline" sx={{ color: '#8b5e34', fontWeight: 700 }}>
+                  Status
+                </Typography>
+                <Typography variant="body1" sx={{ color: '#32261c' }}>
+                  {status}
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#7a6552' }}>
+                  Mode: {gameMode === 'bot' ? `Bot game, you are ${playerColor}` : gameMode === 'two-player' ? 'Two-player game' : 'Not started'}
+                </Typography>
+                {lastMove ? (
+                  <Typography variant="body2" sx={{ color: '#7a6552' }}>
+                    Last local move: {lastMove}
+                  </Typography>
+                ) : null}
+              </Stack>
+            </Paper>
+          </Grid>
+        </Grid>
+        </Grid>
+      </Grid>
+    </>
+  )
+}
