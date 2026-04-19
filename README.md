@@ -16,8 +16,6 @@ This repo includes a root [start-chess](/Users/avenau/Desktop/Projects/Chess%20A
 - Java: `11`
 - Node.js: a current version that includes `npm`
 
-The repo also includes [.java-version](/Users/avenau/Desktop/Projects/Chess%20Ai/.java-version:1), which is set to `11`.
-
 ## macOS Install Options
 
 Using Homebrew:
