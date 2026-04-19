@@ -53,6 +53,24 @@ port_in_use() {
   lsof -ti tcp:"$port" >/dev/null 2>&1
 }
 
+prompt_terminate_port() {
+  local port="$1"
+  local pids
+
+  pids="$(lsof -ti tcp:"$port" | paste -sd ' ' -)"
+  if [[ -z "$pids" ]]; then
+    return 0
+  fi
+
+  read -r -p "Port $port is already in use by PID(s): $pids. Terminate them? [y/N] " response
+  if [[ ! "$response" =~ ^[Yy]$ ]]; then
+    echo "Port $port is already in use." >&2
+    return 1
+  fi
+
+  kill $pids
+}
+
 wait_for_url() {
   local url="$1"
   local label="$2"
@@ -109,13 +127,15 @@ if [[ ! -d "$FRONTEND_DIR/node_modules" ]]; then
 fi
 
 if port_in_use 8080; then
-  echo "Port 8080 is already in use." >&2
-  exit 1
+  if ! prompt_terminate_port 8080; then
+    exit 1
+  fi
 fi
 
 if port_in_use 5173; then
-  echo "Port 5173 is already in use." >&2
-  exit 1
+  if ! prompt_terminate_port 8080; then
+    exit 1
+  fi
 fi
 
 mkdir -p "$RUN_DIR"
