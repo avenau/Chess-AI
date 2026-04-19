@@ -13,7 +13,7 @@ This repo includes a root [start-chess](/Users/avenau/Desktop/Projects/Chess%20A
 
 ## Recommended Versions
 
-- Java: `11`
+- Java: `21`
 - Node.js: a current version that includes `npm`
 
 ## macOS Install Options
@@ -27,7 +27,7 @@ brew install openjdk@11 maven node
 After installing Java with Homebrew, make sure your shell can find it. One common setup is:
 
 ```bash
-export JAVA_HOME=$(/usr/libexec/java_home -v 11)
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 export PATH="$JAVA_HOME/bin:$PATH"
 ```
 
