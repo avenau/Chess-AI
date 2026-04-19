@@ -1,25 +1,24 @@
 package com.aven.chessbot.api;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class BestMoveResponse {
-  private final String bestMove;
-  private final String fen;
-  private final String sideToMove;
+  public BestMoveResponse (String targetPosition, String promotion) {
+    if (promotion == null){
+      this.nextMove = new NextMoveDto(targetPosition);
+    } else {
+      this.nextMove = new NextMoveDto(targetPosition, promotion);
 
-  public BestMoveResponse(String bestMove, String fen, String sideToMove) {
-    this.bestMove = bestMove;
-    this.fen = fen;
-    this.sideToMove = sideToMove;
+    }
   }
-
-  public String getBestMove() {
-    return bestMove;
+  public BestMoveResponse (String error) {
+    this.error = error;
   }
-
-  public String getFen() {
-    return fen;
-  }
-
-  public String getSideToMove() {
-    return sideToMove;
-  }
+  private NextMoveDto nextMove;
+  private String error;
 }

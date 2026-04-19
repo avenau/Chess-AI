@@ -1,3 +1,29 @@
 /chess_ai_backend/target/
 /chess_ai_backend/out/
 /chess_ai_backend/.idea/
+#Frontend
+# Logs
+/chess_ai_frontend/logs
+/chess_ai_frontend/*.log
+/chess_ai_frontend/npm-debug.log*
+/chess_ai_frontend/yarn-debug.log*
+/chess_ai_frontend/yarn-error.log*
+/chess_ai_frontend/pnpm-debug.log*
+/chess_ai_frontend/lerna-debug.log*
+
+/chess_ai_frontend/node_modules
+/chess_ai_frontend/dist
+/chess_ai_frontend/dist-ssr
+/chess_ai_frontend/*.local
+
+# Editor directories and files
+/chess_ai_frontend/.vscode/*
+/chess_ai_frontend/!.vscode/extensions.json
+/chess_ai_frontend/.idea
+/chess_ai_frontend/.DS_Store
+/chess_ai_frontend/*.suo
+/chess_ai_frontend/*.ntvs*
+/chess_ai_frontend/*.njsproj
+/chess_ai_frontend/*.sln
+/chess_ai_frontend/*.sw?
+

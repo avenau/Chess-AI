@@ -56,7 +56,7 @@ export default function ChessPage() {
                   {' '}
                   and backend requests post to
                   {' '}
-                  <Box component="code">/get-next-move</Box>
+                  <Box component="code">http://localhost:8080/api/chess/best-move</Box>
                   .
                 </Typography>
               </Stack>

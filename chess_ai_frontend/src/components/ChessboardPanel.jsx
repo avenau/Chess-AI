@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import axios from 'axios'
 import { Chess } from 'chess.js'
 import { Chessboard } from 'react-chessboard'
@@ -17,6 +17,8 @@ import {
 } from '../state/ChessboardState'
 import ChessGameSetupModal from './ChessGameSetupModal'
 
+const CHESS_API_BASE_URL = import.meta.env.VITE_CHESS_API_BASE_URL ?? 'http://localhost:8080'
+
 function safeGameFromFen(fen) {
   return new Chess(fen)
 }
@@ -25,6 +27,9 @@ function extractNextFen(payload, currentFen) {
   const targetSquare = payload?.nextMove?.target
   const promotion = payload?.nextMove?.promotion
 
+  console.log(targetSquare);
+  console.log(promotion);
+
   if (!targetSquare) {
     return null
   }
@@ -32,7 +37,7 @@ function extractNextFen(payload, currentFen) {
   const game = safeGameFromFen(currentFen)
   const moves = game.moves({ verbose: true })
   const matchingMove = moves.find(
-    (move) => move.to === targetSquare && (!promotion || move.promotion === promotion),
+    (move) => move.to === targetSquare && (promotion === "NONE" || move.promotion === promotion),
   )
 
   if (!matchingMove) {
@@ -53,6 +58,76 @@ function extractNextFen(payload, currentFen) {
     : null
 }
 
+function requestNextMove({ fen, automatic = false }) {
+  chessboardStore.dispatch(chessboardActions.setIsThinking(true))
+  chessboardStore.dispatch(
+    chessboardActions.setStatus(
+      automatic
+        ? `Requesting bot move from ${CHESS_API_BASE_URL}/api/chess/best-move...`
+        : `Requesting next move from ${CHESS_API_BASE_URL}/api/chess/best-move...`,
+    ),
+  )
+  console.log("TESTING ");
+  console.log(CHESS_API_BASE_URL);
+  try {
+    axios.post(
+      `${CHESS_API_BASE_URL}/api/chess/best-move`,
+      { fen },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      },
+    ).then(r => {
+      const payload = r.data
+      const nextMoveResult = extractNextFen(payload, fen)
+      console.log("LOG ");
+      console.log(nextMoveResult);
+      if (!nextMoveResult) {
+        chessboardStore.dispatch(
+          chessboardActions.setStatus(
+            'Received a response, but it did not contain a usable move or FEN yet.',
+          ),
+        )
+        return
+      }
+
+      chessboardStore.dispatch(chessboardActions.setFen(nextMoveResult.fen))
+      chessboardStore.dispatch(
+        chessboardActions.setLastMove(`${nextMoveResult.move.from}-${nextMoveResult.move.to}`),
+      )
+      chessboardStore.dispatch(
+        chessboardActions.setRequestBody(JSON.stringify({ fen: nextMoveResult.fen }, null, 2)),
+      )
+      chessboardStore.dispatch(
+        chessboardActions.setStatus(
+          automatic
+            ? `Bot moved ${nextMoveResult.move.piece.toUpperCase()} from ${nextMoveResult.move.from} to ${nextMoveResult.move.to}.`
+            : 'Applied the backend move to the board.',
+        ),
+      )
+    })
+
+
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      chessboardStore.dispatch(
+        chessboardActions.setStatus(
+          error.response?.data?.error ?? error.message ?? 'Request failed.',
+        ),
+      )
+    } else {
+      chessboardStore.dispatch(
+        chessboardActions.setStatus(
+          error instanceof Error ? error.message : 'Request failed.',
+        ),
+      )
+    }
+  } finally {
+    chessboardStore.dispatch(chessboardActions.setIsThinking(false))
+  }
+}
+
 export default function ChessboardPanel() {
   const {
     fen,
@@ -70,9 +145,11 @@ export default function ChessboardPanel() {
   const turn = fen.split(' ')[1]
   const turnColor = turn === 'w' ? 'white' : 'black'
   const isPlayersTurn = gameMode === 'bot' ? playerColor === turnColor : true
+  const boardOrientation = gameMode === 'two-player' ? turnColor : playerColor
 
   const boardOptions = {
     position: fen.split(' ')[0],
+    boardOrientation,
     allowDragging: !setupOpen && !isThinking,
     canDragPiece: ({ piece }) => {
       if (setupOpen || isThinking || !piece) {
@@ -91,7 +168,7 @@ export default function ChessboardPanel() {
       if (!targetSquare || !isPlayersTurn) {
         return false
       }
-
+      console.log("Target Drop " + targetSquare);
       const nextGame = safeGameFromFen(fen)
       const move = nextGame.move({
         from: sourceSquare,
@@ -122,70 +199,6 @@ export default function ChessboardPanel() {
     },
   }
 
-  const requestNextMove = useEffectEvent(async ({ automatic = false } = {}) => {
-    chessboardStore.dispatch(chessboardActions.setIsThinking(true))
-    chessboardStore.dispatch(
-      chessboardActions.setStatus(
-        automatic ? 'Requesting bot move from /get-next-move...' : 'Requesting next move from /get-next-move...',
-      ),
-    )
-
-    try {
-      const response = await axios.post(
-        '/get-next-move',
-        { fen },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        },
-      )
-
-      const payload = response.data
-      const nextMoveResult = extractNextFen(payload, fen)
-
-      if (!nextMoveResult) {
-        chessboardStore.dispatch(
-          chessboardActions.setStatus(
-            'Received a response, but it did not contain a usable move or FEN yet.',
-          ),
-        )
-        return
-      }
-
-      chessboardStore.dispatch(chessboardActions.setFen(nextMoveResult.fen))
-      chessboardStore.dispatch(
-        chessboardActions.setLastMove(`${nextMoveResult.move.from}-${nextMoveResult.move.to}`),
-      )
-      chessboardStore.dispatch(
-        chessboardActions.setRequestBody(JSON.stringify({ fen: nextMoveResult.fen }, null, 2)),
-      )
-      chessboardStore.dispatch(
-        chessboardActions.setStatus(
-          automatic
-            ? `Bot moved ${nextMoveResult.move.piece.toUpperCase()} from ${nextMoveResult.move.from} to ${nextMoveResult.move.to}.`
-            : 'Applied the backend move to the board.',
-        ),
-      )
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        chessboardStore.dispatch(
-          chessboardActions.setStatus(
-            error.response?.data?.error ?? error.message ?? 'Request failed.',
-          ),
-        )
-      } else {
-        chessboardStore.dispatch(
-          chessboardActions.setStatus(
-            error instanceof Error ? error.message : 'Request failed.',
-          ),
-        )
-      }
-    } finally {
-      chessboardStore.dispatch(chessboardActions.setIsThinking(false))
-    }
-  })
-
   useEffect(() => {
     if (setupOpen) {
       autoRequestedFenRef.current = null
@@ -201,8 +214,8 @@ export default function ChessboardPanel() {
     }
 
     autoRequestedFenRef.current = fen
-    requestNextMove({ automatic: true })
-  }, [fen, gameMode, isPlayersTurn, isThinking, requestNextMove, setupOpen])
+    requestNextMove({fen, automatic: true});
+   }, [fen, gameMode, isPlayersTurn, isThinking, setupOpen])
 
   function resetBoard() {
     autoRequestedFenRef.current = null
@@ -261,7 +274,7 @@ export default function ChessboardPanel() {
               <Button
                 fullWidth
                 variant="contained"
-                onClick={() => requestNextMove()}
+                onClick={() => requestNextMove({ fen })}
                 disabled={isThinking || setupOpen || (gameMode === 'bot' && isPlayersTurn)}
                 sx={{
                   minHeight: 52,
