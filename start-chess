@@ -133,7 +133,7 @@ if port_in_use 8080; then
 fi
 
 if port_in_use 5173; then
-  if ! prompt_terminate_port 8080; then
+  if ! prompt_terminate_port 5173; then
     exit 1
   fi
 fi
