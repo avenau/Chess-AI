@@ -164,14 +164,14 @@ public class StaticBoardEvaluation implements Heuristic {
     CastleRight castleRight = board.getCastleRight(sideToEvaluate);
 
     if (isCastled(board, sideToEvaluate)) {
-      return 20;
+      return 100;
     }
 
     if (castleRight != CastleRight.NONE) {
       return 8;
     }
 
-    return -15;
+    return -20;
   }
 
   private boolean isCastled(Board board, Side sideToEvaluate) {
