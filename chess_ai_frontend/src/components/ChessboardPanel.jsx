@@ -44,12 +44,17 @@ function extractNextFen(payload, currentFen) {
   // if (!matchingMove) {
   //   return null
   // }
- const convertedPromotion = promotion === "NONE" ? "" : promotion;
+ const convertedPromotion = promotion === "NONE" ? null : promotion;
   const result = game.move({
     from: fromSquare,
     to: targetSquare,
     promotion: convertedPromotion ?? 'q',
   })
+
+  console.log(fromSquare);
+  console.log(targetSquare);
+  console.log(promotion);
+  console.log(result);
 
   return result
     ? {
