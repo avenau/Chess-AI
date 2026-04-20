@@ -112,7 +112,7 @@ public class MinimaxPruning implements ChessBot {
 	minimax(0, depth, Integer.MIN_VALUE, Integer.MAX_VALUE, board.getSideToMove(), board);
     System.out.println("info: Value " + this.maxValue);
     System.out.println("info: SAN Move " + this.bestNextMove.getSan());
-        System.out.println("info: ßMove " + this.bestNextMove.toString());
+        System.out.println("info: Move " + this.bestNextMove.toString());
     depth++;
     this.startTime = System.currentTimeMillis();
     }
