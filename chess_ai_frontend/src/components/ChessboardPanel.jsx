@@ -51,10 +51,12 @@ function extractNextFen(payload, currentFen) {
     promotion: convertedPromotion ?? 'q',
   })
 
+  console.log("FULL LOGS");
   console.log(fromSquare);
   console.log(targetSquare);
   console.log(promotion);
   console.log(result);
+  console.log(game.moves({ verbose: true }));
 
   return result
     ? {
