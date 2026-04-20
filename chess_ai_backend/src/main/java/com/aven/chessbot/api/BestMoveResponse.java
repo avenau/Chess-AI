@@ -8,11 +8,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class BestMoveResponse {
-  public BestMoveResponse (String targetPosition, String promotion) {
+  public BestMoveResponse (String fromPosition,String targetPosition, String promotion) {
     if (promotion == null){
-      this.nextMove = new NextMoveDto(targetPosition);
+      this.nextMove = new NextMoveDto(fromPosition,targetPosition);
     } else {
-      this.nextMove = new NextMoveDto(targetPosition, promotion);
+      this.nextMove = new NextMoveDto(fromPosition, targetPosition, promotion);
 
     }
   }

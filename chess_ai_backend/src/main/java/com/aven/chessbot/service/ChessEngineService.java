@@ -28,7 +28,7 @@ public class ChessEngineService {
       if (bestMove == null) {
         return new BestMoveResponse("Internal Error");
       }
-      return new BestMoveResponse(bestMove.getTo().name().toLowerCase(), bestMove.getPromotion().name());
+      return new BestMoveResponse(bestMove.getFrom().name().toLowerCase(),bestMove.getTo().name().toLowerCase(), bestMove.getPromotion().name());
     } catch (MoveGeneratorException e) {
       throw new ResponseStatusException(
           HttpStatus.BAD_REQUEST, "Unable to generate legal moves for the supplied position.", e);

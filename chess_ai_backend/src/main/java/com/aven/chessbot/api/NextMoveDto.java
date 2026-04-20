@@ -7,8 +7,10 @@ import lombok.Data;
 @AllArgsConstructor
 public class NextMoveDto {
     String target;
+    String from;
     String promotion;
-    public NextMoveDto(String target) {
+    public NextMoveDto(String from, String target) {
         this.target = target;
+        this.from = from;
     }
 }
