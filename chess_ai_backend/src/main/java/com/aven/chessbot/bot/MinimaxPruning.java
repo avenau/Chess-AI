@@ -258,6 +258,9 @@ public class MinimaxPruning implements ChessBot {
         }
         return alpha;
     } else {
+        Move bestMove = null;
+        int originalBeta = beta;
+
         for (Move temp : moveList) {
             board.doMove(temp);
             int currentScore;
@@ -272,12 +275,24 @@ public class MinimaxPruning implements ChessBot {
             board.undoMove();
             if (currentScore < beta) {
                 beta = currentScore;
+                bestMove = temp;
             }
 
             if (alpha >= beta) {
+                transpositionTable.put(
+                    positionKey,
+                    new TranspositionEntry(
+                        beta, boundDepth - depth, TranspositionEntry.UPPERBOUND, bestMove));
                 break;
             }
         }
+
+        byte flag =
+            beta >= originalBeta
+                ? TranspositionEntry.LOWERBOUND
+                : beta <= alpha ? TranspositionEntry.UPPERBOUND : TranspositionEntry.EXACT;
+        transpositionTable.put(
+            positionKey, new TranspositionEntry(beta, boundDepth - depth, flag, bestMove));
         return beta;
     }
   }
