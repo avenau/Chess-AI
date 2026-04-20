@@ -36,7 +36,7 @@ function extractNextFen(payload, currentFen) {
   }
 
   const game = safeGameFromFen(currentFen)
-  const moves = game.moves({ verbose: true })
+  //const moves = game.moves({ verbose: true })
   // const matchingMove = moves.find(
   //   (move) => move.to === targetSquare && move.from === fromSquare && (promotion === "NONE" || move.promotion === promotion),
   // )
@@ -44,11 +44,11 @@ function extractNextFen(payload, currentFen) {
   // if (!matchingMove) {
   //   return null
   // }
-
+ const convertedPromotion = promotion === "NONE" ? "" : promotion;
   const result = game.move({
     from: fromSquare,
     to: targetSquare,
-    promotion: promotion ?? 'q',
+    promotion: convertedPromotion ?? 'q',
   })
 
   return result
