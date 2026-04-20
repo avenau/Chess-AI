@@ -3,12 +3,11 @@ package com.aven.chessbot.bot;
 import com.aven.chessbot.components.TranspositionEntry;
 import com.aven.chessbot.components.Zobrist;
 import com.aven.chessbot.heuristic.Heuristic;
-import com.aven.chessbot.heuristic.StaticBoardEvaluation;
+import com.aven.chessbot.heuristic.OptimizedHeuristic;
 import com.github.bhlangonijr.chesslib.*;
 import com.github.bhlangonijr.chesslib.move.Move;
 import com.github.bhlangonijr.chesslib.move.MoveGenerator;
 import com.github.bhlangonijr.chesslib.move.MoveGeneratorException;
-import com.github.bhlangonijr.chesslib.move.MoveList;
 
 import java.util.*;
 
@@ -42,7 +41,7 @@ public class MinimaxPruning implements ChessBot {
     // Side of the bot
     this.side = side;
     // Change your heuristic HERE
-    this.heuristic = new StaticBoardEvaluation(side);
+    this.heuristic = new OptimizedHeuristic(side);
 
     this.zobList = new ArrayList<Zobrist>();
     this.transpositionTable = new HashMap<>();
