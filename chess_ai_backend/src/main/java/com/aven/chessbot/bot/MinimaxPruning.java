@@ -118,6 +118,9 @@ public class MinimaxPruning implements ChessBot {
         }
         depth++;
         this.startTime = System.currentTimeMillis();
+        if (this.maxValue >= 100_000_000){
+            break;
+        }
     }
 
       System.out.println("info: Value " + this.maxValue);
