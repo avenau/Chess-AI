@@ -109,7 +109,12 @@ public class MinimaxPruning implements ChessBot {
     while (this.startTime <= this.endTime){
         this.transpositionTable = new HashMap<>();
         System.out.println("info: Searching depth " + depth);
-        minimax(0, depth, Integer.MIN_VALUE, Integer.MAX_VALUE, board.getSideToMove(), board);
+        try {
+            minimax(0, depth, Integer.MIN_VALUE, Integer.MAX_VALUE, board.getSideToMove(), board);
+        } catch (InterruptedException e) {
+            System.out.println("info: Search interrupted due to time limit");
+            break;
+        }
         depth++;
         this.startTime = System.currentTimeMillis();
     }
@@ -185,10 +190,10 @@ public class MinimaxPruning implements ChessBot {
   int minimax(int depth, int boundDepth, int alpha, int beta, Side side, Board board)
       throws MoveGeneratorException, InterruptedException {
 
-//   if (System.currentTimeMillis() >= endTime) {
-//        throw new InterruptedException("Time limit exceeded");
+   if (System.currentTimeMillis() >= endTime && depth > 6) {
+        throw new InterruptedException("Time limit exceeded");
 //return Math.toIntExact(this.maxValue);
-//    }
+    }
 
     String positionKey = board.getFen();
 
