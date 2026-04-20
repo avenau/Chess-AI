@@ -1,5 +1,6 @@
 package com.aven.chessbot.heuristic;
 
+import com.aven.chessbot.util.ChessUtil;
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.CastleRight;
 import com.github.bhlangonijr.chesslib.Piece;
@@ -104,31 +105,31 @@ public class StaticBoardEvaluation implements Heuristic {
      */
     private int pieceEvaluation(Board board, int total) {
         if (board.getSideToMove().value().equalsIgnoreCase("black")) {
-            total = total + board.getPieceLocation(Piece.BLACK_BISHOP).size() * 340;
-            total = total + board.getPieceLocation(Piece.BLACK_KNIGHT).size() * 325;
-            total = total + board.getPieceLocation(Piece.BLACK_PAWN).size() * 100;
-            total = total + board.getPieceLocation(Piece.BLACK_ROOK).size() * 500;
-            total = total + board.getPieceLocation(Piece.BLACK_QUEEN).size() * 900;
-            total = total - board.getPieceLocation(Piece.WHITE_BISHOP).size() * 340;
-            total = total - board.getPieceLocation(Piece.WHITE_KNIGHT).size() * 325;
-            total = total - board.getPieceLocation(Piece.WHITE_PAWN).size() * 100;
-            total = total - board.getPieceLocation(Piece.WHITE_ROOK).size() * 500;
-            total = total - board.getPieceLocation(Piece.WHITE_QUEEN).size() * 900;
+            total = total + board.getPieceLocation(Piece.BLACK_BISHOP).size() * ChessUtil.BISHOP_VALUE;
+            total = total + board.getPieceLocation(Piece.BLACK_KNIGHT).size() * ChessUtil.KNIGHT_VALUE;
+            total = total + board.getPieceLocation(Piece.BLACK_PAWN).size() * ChessUtil.PAWN_VALUE;
+            total = total + board.getPieceLocation(Piece.BLACK_ROOK).size() * ChessUtil.ROOK_VALUE;
+            total = total + board.getPieceLocation(Piece.BLACK_QUEEN).size() * ChessUtil.QUEEN_VALUE;
+            total = total - board.getPieceLocation(Piece.WHITE_BISHOP).size() * ChessUtil.BISHOP_VALUE;
+            total = total - board.getPieceLocation(Piece.WHITE_KNIGHT).size() * ChessUtil.KNIGHT_VALUE;
+            total = total - board.getPieceLocation(Piece.WHITE_PAWN).size() * ChessUtil.PAWN_VALUE;
+            total = total - board.getPieceLocation(Piece.WHITE_ROOK).size() * ChessUtil.ROOK_VALUE;
+            total = total - board.getPieceLocation(Piece.WHITE_QUEEN).size() * ChessUtil.QUEEN_VALUE;
             if (!side.value().equalsIgnoreCase("black")) {
                 total = total * -1;
             }
 
         } else {
-            total = total - board.getPieceLocation(Piece.BLACK_BISHOP).size() * 340;
-            total = total - board.getPieceLocation(Piece.BLACK_KNIGHT).size() * 325;
-            total = total - board.getPieceLocation(Piece.BLACK_PAWN).size() * 100;
-            total = total - board.getPieceLocation(Piece.BLACK_ROOK).size() * 500;
-            total = total - board.getPieceLocation(Piece.BLACK_QUEEN).size() * 900;
-            total = total + board.getPieceLocation(Piece.WHITE_BISHOP).size() * 340;
-            total = total + board.getPieceLocation(Piece.WHITE_KNIGHT).size() * 325;
-            total = total + board.getPieceLocation(Piece.WHITE_PAWN).size() * 100;
-            total = total + board.getPieceLocation(Piece.WHITE_ROOK).size() * 500;
-            total = total + board.getPieceLocation(Piece.WHITE_QUEEN).size() * 900;
+            total = total - board.getPieceLocation(Piece.BLACK_BISHOP).size() * ChessUtil.BISHOP_VALUE;
+            total = total - board.getPieceLocation(Piece.BLACK_KNIGHT).size() * ChessUtil.KNIGHT_VALUE;
+            total = total - board.getPieceLocation(Piece.BLACK_PAWN).size() * ChessUtil.PAWN_VALUE;
+            total = total - board.getPieceLocation(Piece.BLACK_ROOK).size() * ChessUtil.ROOK_VALUE;
+            total = total - board.getPieceLocation(Piece.BLACK_QUEEN).size() * ChessUtil.QUEEN_VALUE;
+            total = total + board.getPieceLocation(Piece.WHITE_BISHOP).size() * ChessUtil.BISHOP_VALUE;
+            total = total + board.getPieceLocation(Piece.WHITE_KNIGHT).size() * ChessUtil.KNIGHT_VALUE;
+            total = total + board.getPieceLocation(Piece.WHITE_PAWN).size() * ChessUtil.PAWN_VALUE;
+            total = total + board.getPieceLocation(Piece.WHITE_ROOK).size() * ChessUtil.ROOK_VALUE;
+            total = total + board.getPieceLocation(Piece.WHITE_QUEEN).size() * ChessUtil.QUEEN_VALUE;
             if (!side.value().equalsIgnoreCase("white")) {
                 total = total * -1;
             }
