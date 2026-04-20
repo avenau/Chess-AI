@@ -8,5 +8,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class BestMoveRequest {
-  private String fen;
+    private String fen;
 }

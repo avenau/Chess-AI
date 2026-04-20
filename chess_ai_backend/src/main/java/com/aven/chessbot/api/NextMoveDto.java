@@ -9,6 +9,7 @@ public class NextMoveDto {
     String from;
     String target;
     String promotion;
+
     public NextMoveDto(String from, String target) {
         this.target = target;
         this.from = from;

@@ -12,21 +12,21 @@ import org.springframework.web.bind.annotation.RestController;
 @CrossOrigin(origins = "http://localhost:5173")
 @RequestMapping("/api/chess")
 public class ChessController {
-  private final ChessEngineService chessEngineService;
+    private final ChessEngineService chessEngineService;
 
-  public ChessController(ChessEngineService chessEngineService) {
-    this.chessEngineService = chessEngineService;
-  }
+    public ChessController(ChessEngineService chessEngineService) {
+        this.chessEngineService = chessEngineService;
+    }
 
-  @GetMapping("/health")
-  public String health() {
-    return "ok";
-  }
+    @GetMapping("/health")
+    public String health() {
+        return "ok";
+    }
 
-  @PostMapping("/best-move")
-  public BestMoveResponse bestMove(@RequestBody(required = false) BestMoveRequest request)
-      throws InterruptedException {
-    BestMoveRequest safeRequest = request == null ? new BestMoveRequest() : request;
-    return chessEngineService.findBestMove(safeRequest);
-  }
+    @PostMapping("/best-move")
+    public BestMoveResponse bestMove(@RequestBody(required = false) BestMoveRequest request)
+            throws InterruptedException {
+        BestMoveRequest safeRequest = request == null ? new BestMoveRequest() : request;
+        return chessEngineService.findBestMove(safeRequest);
+    }
 }
