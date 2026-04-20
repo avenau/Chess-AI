@@ -157,37 +157,36 @@ public class StaticBoardEvaluation implements Heuristic {
   }
 
   private int analyseCastle(Board board, int total) {
-    // King Safety
-    CastleRight ally = board.getCastleRight(this.side);
-    CastleRight enemy = board.getCastleRight(this.side.flip());
+    return total + castleScore(board, this.side) - castleScore(board, this.side.flip());
+  }
 
-    // If conditions for the bot
-    if (board.getSideToMove().equals(this.side)) {
-      if (ally == CastleRight.NONE) {
-        total = total - 15;
-      } else {
-        total = total + 12;
-      }
+  private int castleScore(Board board, Side sideToEvaluate) {
+    CastleRight castleRight = board.getCastleRight(sideToEvaluate);
 
-      if (enemy == CastleRight.NONE) {
-        total = total + 15;
-      } else {
-        total = total - 12;
-      }
-    } else {
-      if (ally == CastleRight.NONE) {
-        total = total + 15;
-      } else {
-        total = total - 12;
-      }
-
-      if (enemy == CastleRight.NONE) {
-        total = total - 15;
-      } else {
-        total = total + 12;
-      }
+    if (isCastled(board, sideToEvaluate)) {
+      return 20;
     }
-    return total;
+
+    if (castleRight != CastleRight.NONE) {
+      return 8;
+    }
+
+    return -15;
+  }
+
+  private boolean isCastled(Board board, Side sideToEvaluate) {
+    Square kingSquare =
+        sideToEvaluate == Side.WHITE
+            ? board.getKingSquare(Side.WHITE)
+            : board.getKingSquare(Side.BLACK);
+
+    if (sideToEvaluate == Side.WHITE) {
+      return (kingSquare == Square.G1 && board.getPiece(Square.F1) == Piece.WHITE_ROOK)
+          || (kingSquare == Square.C1 && board.getPiece(Square.D1) == Piece.WHITE_ROOK);
+    }
+
+    return (kingSquare == Square.G8 && board.getPiece(Square.F8) == Piece.BLACK_ROOK)
+        || (kingSquare == Square.C8 && board.getPiece(Square.D8) == Piece.BLACK_ROOK);
   }
 
   private int analysePawn(Board board) {
