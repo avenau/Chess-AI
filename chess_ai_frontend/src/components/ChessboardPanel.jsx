@@ -157,6 +157,30 @@ export default function ChessboardPanel() {
   const turnColor = turn === 'w' ? 'white' : 'black'
   const isPlayersTurn = gameMode === 'bot' ? playerColor === turnColor : true
   const boardOrientation = gameMode === 'two-player' ? turnColor : playerColor
+  const selectedSquareMoves = selectedSquare
+    ? safeGameFromFen(fen).moves({ square: selectedSquare, verbose: true })
+    : []
+  const customSquareStyles = selectedSquare
+    ? selectedSquareMoves.reduce(
+        (styles, move) => {
+          styles[move.to] = move.captured
+            ? {
+                background:
+                  'radial-gradient(circle, rgba(186, 58, 44, 0.22) 0%, rgba(186, 58, 44, 0.22) 58%, rgba(186, 58, 44, 0.72) 58%, rgba(186, 58, 44, 0.72) 72%, transparent 72%)',
+              }
+            : {
+                background:
+                  'radial-gradient(circle, rgba(31, 91, 77, 0.34) 0%, rgba(31, 91, 77, 0.34) 22%, transparent 24%)',
+              }
+          return styles
+        },
+        {
+          [selectedSquare]: {
+            backgroundColor: 'rgba(214, 178, 66, 0.45)',
+          },
+        },
+      )
+    : {}
 
   function canControlPiece(piece) {
     if (setupOpen || isThinking || !piece) {
@@ -211,6 +235,7 @@ export default function ChessboardPanel() {
     position: fen.split(' ')[0],
     boardOrientation,
     allowDragging: !setupOpen && !isThinking,
+    customSquareStyles,
     canDragPiece: ({ piece }) => {
       return canControlPiece(piece?.pieceType)
     },
