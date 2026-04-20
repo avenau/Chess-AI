@@ -43,10 +43,9 @@ public class MinimaxPruning implements ChessBot {
     // Change your heuristic HERE
     this.heuristic = new StaticBoardEvaluation(side);
 
-    this.zobList = new ArrayList<Zobrist>();
+    this.zobList = new ArrayList<>();
     this.transpositionTable = new HashMap<>();
-    this.timeLimit = 20000;
-    // this.bestMoveHistory = new HashMap<Integer, MoveHistoryEntry>();
+    this.timeLimit = 10000;
   }
 
   /**
@@ -99,13 +98,13 @@ public class MinimaxPruning implements ChessBot {
   Move bestMove(Board board) throws MoveGeneratorException, InterruptedException {
     Move move = null;
     nodeCount = 0;
-    int depth = 6;
+    int depth = 2;
     this.startTime = System.currentTimeMillis();
     this.firstStartTime = System.currentTimeMillis();
     this.endTime = startTime + timeLimit;
-    if (board.getMoveCounter() < 10) {
-      depth = 5;
-    }
+//    if (board.getMoveCounter() < 10) {
+//      depth = 5;
+//    }
     System.out.println("Start: " + this.startTime + " End: " + this.endTime);
     while (this.startTime <= this.endTime){
         this.transpositionTable = new HashMap<>();
@@ -194,7 +193,7 @@ public class MinimaxPruning implements ChessBot {
   int minimax(int depth, int boundDepth, int alpha, int beta, Side side, Board board)
       throws MoveGeneratorException, InterruptedException {
 
-   if (System.currentTimeMillis() >= endTime && depth > 6) {
+   if (System.currentTimeMillis() >= endTime) {
         throw new InterruptedException("Time limit exceeded");
 //return Math.toIntExact(this.maxValue);
     }
