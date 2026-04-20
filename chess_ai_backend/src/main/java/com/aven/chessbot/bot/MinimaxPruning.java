@@ -25,6 +25,7 @@ public class MinimaxPruning implements ChessBot {
   private ArrayList<Zobrist> zobList;
   private HashMap<String, TranspositionEntry> transpositionTable;
   private long startTime;
+  private long firstStartTime;
   private long maxDepth;
   private long timeLimit;
   private long endTime;
@@ -101,6 +102,7 @@ public class MinimaxPruning implements ChessBot {
     nodeCount = 0;
     int depth = 6;
     this.startTime = System.currentTimeMillis();
+    this.firstStartTime = System.currentTimeMillis();
     this.endTime = startTime + timeLimit;
     if (board.getMoveCounter() < 10) {
       depth = 5;
@@ -123,7 +125,7 @@ public class MinimaxPruning implements ChessBot {
       System.out.println("info: Move " + this.bestNextMove.toString());
     System.out.println("info Depth Searched: " + maxDepth);
     System.out.println("info Number of Nodes Visited: " + nodeCount);
-      System.out.println("Time taken: " + (System.currentTimeMillis() - this.startTime)/1000 + " seconds");
+      System.out.println("Time taken: " + (System.currentTimeMillis() - this.firstStartTime)/1000 + " seconds");
     return bestNextMove;
   }
 
