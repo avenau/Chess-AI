@@ -107,22 +107,18 @@ public class MinimaxPruning implements ChessBot {
     }
     System.out.println("Start: " + this.startTime + " End: " + this.endTime);
     while (this.startTime <= this.endTime){
-    this.transpositionTable = new HashMap<String, TranspositionEntry>();
+    this.transpositionTable = new HashMap<>();
     System.out.println("info: Searching depth " + depth);
-//try{    
 	minimax(0, depth, Integer.MIN_VALUE, Integer.MAX_VALUE, board.getSideToMove(), board);
-//} catch (InterruptedException e){
-  //break;
-//}    
-System.out.println("info: Value " + this.maxValue);
-    System.out.println("info: Move " + this.bestNextMove.toString());
+    System.out.println("info: Value " + this.maxValue);
+    System.out.println("info: SAN Move " + this.bestNextMove.getSan());
+        System.out.println("info: SAN Move " + this.bestNextMove.toString());
     depth++;
     this.startTime = System.currentTimeMillis();
     }
 
     System.out.println("info Depth Searched: " + maxDepth);
     System.out.println("info Number of Nodes Visited: " + nodeCount);
-    System.out.println("Best Move: " + bestNextMove.getFrom() + " - " + bestNextMove().getTo()); 
     return bestNextMove;
   }
 
@@ -195,7 +191,7 @@ System.out.println("info: Value " + this.maxValue);
     }
 
     String positionKey = board.getFen();
-    
+
     TranspositionEntry entry = transpositionTable.get(positionKey);
     if (entry != null && entry.getDepth() >= boundDepth - depth) {
         if (entry.getFlag() == TranspositionEntry.EXACT) {
@@ -244,7 +240,7 @@ System.out.println("info: Value " + this.maxValue);
                 bestMove = temp;
             }
             if (alpha >= beta) {
-                transpositionTable.put(positionKey, 
+                transpositionTable.put(positionKey,
                     new TranspositionEntry(alpha, boundDepth - depth, TranspositionEntry.LOWERBOUND, bestMove));
                 break;
             }
@@ -253,7 +249,7 @@ System.out.println("info: Value " + this.maxValue);
         byte flag = alpha <= originalAlpha ? TranspositionEntry.UPPERBOUND :
                     alpha >= beta ? TranspositionEntry.LOWERBOUND :
                     TranspositionEntry.EXACT;
-        transpositionTable.put(positionKey, 
+        transpositionTable.put(positionKey,
             new TranspositionEntry(alpha, boundDepth - depth, flag, bestMove));
 
         if (depth == 0) {
