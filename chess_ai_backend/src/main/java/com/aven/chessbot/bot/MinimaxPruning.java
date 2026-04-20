@@ -45,7 +45,7 @@ public class MinimaxPruning implements ChessBot {
 
     this.zobList = new ArrayList<Zobrist>();
     this.transpositionTable = new HashMap<>();
-    this.timeLimit = 20;
+    this.timeLimit = 20000;
     // this.bestMoveHistory = new HashMap<Integer, MoveHistoryEntry>();
   }
 
@@ -107,14 +107,14 @@ public class MinimaxPruning implements ChessBot {
     }
     System.out.println("Start: " + this.startTime + " End: " + this.endTime);
     while (this.startTime <= this.endTime){
-    this.transpositionTable = new HashMap<>();
-    System.out.println("info: Searching depth " + depth);
-	minimax(0, depth, Integer.MIN_VALUE, Integer.MAX_VALUE, board.getSideToMove(), board);
-    System.out.println("info: Value " + this.maxValue);
-    System.out.println("info: SAN Move " + this.bestNextMove.getSan());
+        this.transpositionTable = new HashMap<>();
+        System.out.println("info: Searching depth " + depth);
+        minimax(0, depth, Integer.MIN_VALUE, Integer.MAX_VALUE, board.getSideToMove(), board);
+        System.out.println("info: Value " + this.maxValue);
+        System.out.println("info: SAN Move " + this.bestNextMove.getSan());
         System.out.println("info: Move " + this.bestNextMove.toString());
-    depth++;
-    this.startTime = System.currentTimeMillis();
+        depth++;
+        this.startTime = System.currentTimeMillis();
     }
 
     System.out.println("info Depth Searched: " + maxDepth);
@@ -185,10 +185,10 @@ public class MinimaxPruning implements ChessBot {
   int minimax(int depth, int boundDepth, int alpha, int beta, Side side, Board board)
       throws MoveGeneratorException, InterruptedException {
 
-   if (System.currentTimeMillis() >= endTime) {
-  //      throw new InterruptedException("Time limit exceeded");
+//   if (System.currentTimeMillis() >= endTime) {
+//        throw new InterruptedException("Time limit exceeded");
 //return Math.toIntExact(this.maxValue);
-    }
+//    }
 
     String positionKey = board.getFen();
 
