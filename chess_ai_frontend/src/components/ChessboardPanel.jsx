@@ -44,7 +44,9 @@ function extractNextFen(payload, currentFen) {
   // if (!matchingMove) {
   //   return null
   // }
- const convertedPromotion = promotion === "NONE" ? null : promotion;
+    console.log(game.moves({ verbose: true }));
+
+    const convertedPromotion = promotion === "NONE" ? null : promotion;
   const result = game.move({
     from: fromSquare,
     to: targetSquare,
@@ -56,7 +58,7 @@ function extractNextFen(payload, currentFen) {
   console.log(targetSquare);
   console.log(promotion);
   console.log(result);
-  console.log(game.moves({ verbose: true }));
+  // console.log(game.moves({ verbose: true }));
 
   return result
     ? {
