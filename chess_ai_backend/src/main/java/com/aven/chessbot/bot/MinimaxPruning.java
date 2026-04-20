@@ -110,13 +110,12 @@ public class MinimaxPruning implements ChessBot {
         this.transpositionTable = new HashMap<>();
         System.out.println("info: Searching depth " + depth);
         minimax(0, depth, Integer.MIN_VALUE, Integer.MAX_VALUE, board.getSideToMove(), board);
-        System.out.println("info: Value " + this.maxValue);
-        System.out.println("info: SAN Move " + this.bestNextMove.getSan());
-        System.out.println("info: Move " + this.bestNextMove.toString());
         depth++;
         this.startTime = System.currentTimeMillis();
     }
 
+      System.out.println("info: Value " + this.maxValue);
+      System.out.println("info: Move " + this.bestNextMove.toString());
     System.out.println("info Depth Searched: " + maxDepth);
     System.out.println("info Number of Nodes Visited: " + nodeCount);
     return bestNextMove;
