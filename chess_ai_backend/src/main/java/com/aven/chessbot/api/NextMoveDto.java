@@ -6,8 +6,8 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class NextMoveDto {
-    String target;
     String from;
+    String target;
     String promotion;
     public NextMoveDto(String from, String target) {
         this.target = target;
