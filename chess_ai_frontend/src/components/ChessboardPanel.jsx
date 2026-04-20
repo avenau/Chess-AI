@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import axios from 'axios'
 import { Chess } from 'chess.js'
 import { Chessboard } from 'react-chessboard'
@@ -152,62 +152,116 @@ export default function ChessboardPanel() {
     (state) => state,
   )
   const autoRequestedFenRef = useRef(null)
+  const [selectedSquare, setSelectedSquare] = useState(null)
   const turn = fen.split(' ')[1]
   const turnColor = turn === 'w' ? 'white' : 'black'
   const isPlayersTurn = gameMode === 'bot' ? playerColor === turnColor : true
   const boardOrientation = gameMode === 'two-player' ? turnColor : playerColor
+
+  function canControlPiece(piece) {
+    if (setupOpen || isThinking || !piece) {
+      return false
+    }
+
+    const pieceColor = piece.startsWith('w') ? 'white' : 'black'
+
+    if (gameMode === 'bot') {
+      return pieceColor === playerColor && pieceColor === turnColor
+    }
+
+    return pieceColor === turnColor
+  }
+
+  function applyMove(sourceSquare, targetSquare) {
+    if (!targetSquare || !isPlayersTurn) {
+      return false
+    }
+
+    const nextGame = safeGameFromFen(fen)
+    const move = nextGame.move({
+      from: sourceSquare,
+      to: targetSquare,
+      promotion: 'q',
+    })
+
+    if (!move) {
+      chessboardStore.dispatch(
+        chessboardActions.setStatus('Illegal move. Try a legal move on the board.'),
+      )
+      return false
+    }
+
+    const nextFen = nextGame.fen()
+    chessboardStore.dispatch(chessboardActions.setFen(nextFen))
+    chessboardStore.dispatch(chessboardActions.setLastMove(`${move.from}-${move.to}`))
+    chessboardStore.dispatch(
+      chessboardActions.setRequestBody(JSON.stringify({ fen: nextFen }, null, 2)),
+    )
+    chessboardStore.dispatch(
+      chessboardActions.setStatus(
+        `Moved ${move.piece.toUpperCase()} from ${move.from} to ${move.to}.`,
+      ),
+    )
+    setSelectedSquare(null)
+
+    return true
+  }
 
   const boardOptions = {
     position: fen.split(' ')[0],
     boardOrientation,
     allowDragging: !setupOpen && !isThinking,
     canDragPiece: ({ piece }) => {
-      if (setupOpen || isThinking || !piece) {
-        return false
-      }
-
-      const pieceColor = piece.pieceType.startsWith('w') ? 'white' : 'black'
-
-      if (gameMode === 'bot') {
-        return pieceColor === playerColor && pieceColor === turnColor
-      }
-
-      return pieceColor === turnColor
+      return canControlPiece(piece?.pieceType)
     },
     onPieceDrop: ({ sourceSquare, targetSquare }) => {
-      if (!targetSquare || !isPlayersTurn) {
-        return false
-      }
-      console.log("Target Drop " + targetSquare);
-      const nextGame = safeGameFromFen(fen)
-      const move = nextGame.move({
-        from: sourceSquare,
-        to: targetSquare,
-        promotion: 'q',
-      })
+      return applyMove(sourceSquare, targetSquare)
+    },
+    onSquareClick: (squareOrEvent) => {
+      const square =
+        typeof squareOrEvent === 'string' ? squareOrEvent : squareOrEvent?.square
 
-      if (!move) {
+      if (!square || setupOpen || isThinking || !isPlayersTurn) {
+        return
+      }
+
+      const game = safeGameFromFen(fen)
+      const piece = game.get(square)
+      const pieceCode = piece ? `${piece.color}${piece.type.toUpperCase()}`.toLowerCase() : null
+
+      if (!selectedSquare) {
+        if (!canControlPiece(pieceCode)) {
+          return
+        }
+
+        setSelectedSquare(square)
         chessboardStore.dispatch(
-          chessboardActions.setStatus('Illegal move. Try a legal move on the board.'),
+          chessboardActions.setStatus(`Selected ${square}. Choose a destination square.`),
         )
-        return false
+        return
       }
 
-      const nextFen = nextGame.fen()
-      chessboardStore.dispatch(chessboardActions.setFen(nextFen))
-      chessboardStore.dispatch(chessboardActions.setLastMove(`${move.from}-${move.to}`))
-      chessboardStore.dispatch(
-        chessboardActions.setRequestBody(JSON.stringify({ fen: nextFen }, null, 2)),
-      )
-      chessboardStore.dispatch(
-        chessboardActions.setStatus(
-          `Moved ${move.piece.toUpperCase()} from ${move.from} to ${move.to}.`,
-        ),
-      )
+      if (selectedSquare === square) {
+        setSelectedSquare(null)
+        chessboardStore.dispatch(chessboardActions.setStatus(`Selection cleared from ${square}.`))
+        return
+      }
 
-      return true
+      if (canControlPiece(pieceCode)) {
+        setSelectedSquare(square)
+        chessboardStore.dispatch(
+          chessboardActions.setStatus(`Selected ${square}. Choose a destination square.`),
+        )
+        return
+      }
+
+      applyMove(selectedSquare, square)
     },
   }
+
+  useEffect(() => {
+    setSelectedSquare(null)
+  }, [fen, setupOpen])
 
   useEffect(() => {
     if (setupOpen) {
