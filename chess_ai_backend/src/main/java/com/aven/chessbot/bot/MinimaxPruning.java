@@ -118,6 +118,7 @@ public class MinimaxPruning implements ChessBot {
       System.out.println("info: Move " + this.bestNextMove.toString());
     System.out.println("info Depth Searched: " + maxDepth);
     System.out.println("info Number of Nodes Visited: " + nodeCount);
+      System.out.println("Time taken: " + (System.currentTimeMillis() - this.startTime)/1000 + " seconds");
     return bestNextMove;
   }
 
