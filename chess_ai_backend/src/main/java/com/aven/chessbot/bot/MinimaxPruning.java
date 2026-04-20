@@ -236,6 +236,7 @@ public class MinimaxPruning implements ChessBot {
     if (board.getSideToMove().value().equalsIgnoreCase(this.side.value())) {
         Move bestMove = null;
         int originalAlpha = alpha;
+        int originalBeta = beta;
 
         for (Move temp : moveList) {
             board.doMove(temp);
@@ -247,17 +248,20 @@ public class MinimaxPruning implements ChessBot {
                 bestMove = temp;
             }
             if (alpha >= beta) {
-                transpositionTable.put(positionKey,
-                    new TranspositionEntry(alpha, boundDepth - depth, TranspositionEntry.LOWERBOUND, bestMove));
+                transpositionTable.put(
+                    positionKey,
+                    new TranspositionEntry(
+                        alpha, boundDepth - depth, TranspositionEntry.LOWERBOUND, bestMove));
                 break;
             }
         }
 
-        byte flag = alpha <= originalAlpha ? TranspositionEntry.UPPERBOUND :
-                    alpha >= beta ? TranspositionEntry.LOWERBOUND :
-                    TranspositionEntry.EXACT;
-        transpositionTable.put(positionKey,
-            new TranspositionEntry(alpha, boundDepth - depth, flag, bestMove));
+        byte flag =
+            alpha <= originalAlpha
+                ? TranspositionEntry.UPPERBOUND
+                : alpha >= originalBeta ? TranspositionEntry.LOWERBOUND : TranspositionEntry.EXACT;
+        transpositionTable.put(
+            positionKey, new TranspositionEntry(alpha, boundDepth - depth, flag, bestMove));
 
         if (depth == 0) {
             bestNextMove = bestMove;
