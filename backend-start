@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACKEND_DIR="$ROOT_DIR/chess_ai_backend"
+RUN_DIR="$ROOT_DIR/.run"
+BACKEND_LOG="$RUN_DIR/backend.log"
+BACKEND_URL="http://localhost:8080/api/chess/health"
+JAVA_VERSION="$(cat "$ROOT_DIR/.java-version" 2>/dev/null || true)"
+BACKEND_PID=""
+
+require_command() {
+  local cmd="$1"
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    echo "Missing required command: $cmd" >&2
+    exit 1
+  fi
+}
+
+prepare_java_home() {
+  if [[ -n "${JAVA_HOME:-}" ]] && [[ -x "${JAVA_HOME}/bin/java" ]]; then
+    return
+  fi
+
+  if command -v /usr/libexec/java_home >/dev/null 2>&1; then
+    if [[ -n "$JAVA_VERSION" ]]; then
+      local resolved_java_home
+      resolved_java_home="$(/usr/libexec/java_home -v "$JAVA_VERSION" 2>/dev/null || true)"
+      if [[ -n "$resolved_java_home" ]]; then
+        export JAVA_HOME="$resolved_java_home"
+        return
+      fi
+    fi
+
+    local fallback_java_home
+    fallback_java_home="$(/usr/libexec/java_home 2>/dev/null || true)"
+    if [[ -n "$fallback_java_home" ]]; then
+      export JAVA_HOME="$fallback_java_home"
+      return
+    fi
+  fi
+
+  echo "JAVA_HOME is not set and no local JDK was found." >&2
+  exit 1
+}
+
+port_in_use() {
+  local port="$1"
+  lsof -ti tcp:"$port" >/dev/null 2>&1
+}
+
+prompt_terminate_port() {
+  local port="$1"
+  local pids
+
+  pids="$(lsof -ti tcp:"$port" | paste -sd ' ' -)"
+  if [[ -z "$pids" ]]; then
+    return 0
+  fi
+
+  read -r -p "Port $port is already in use by PID(s): $pids. Terminate them? [y/N] " response
+  if [[ ! "$response" =~ ^[Yy]$ ]]; then
+    echo "Port $port is already in use." >&2
+    return 1
+  fi
+
+  kill $pids
+}
+
+wait_for_url() {
+  local url="$1"
+  local label="$2"
+  local attempts=60
+
+  for ((i = 1; i <= attempts; i++)); do
+    if curl -fsS "$url" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 1
+  done
+
+  echo "$label did not become ready in time." >&2
+  return 1
+}
+
+cleanup() {
+  local exit_code="$?"
+
+  if [[ -n "$BACKEND_PID" ]] && kill -0 "$BACKEND_PID" >/dev/null 2>&1; then
+    kill "$BACKEND_PID" >/dev/null 2>&1 || true
+  fi
+
+  wait "$BACKEND_PID" >/dev/null 2>&1 || true
+
+  exit "$exit_code"
+}
+
+require_command curl
+require_command lsof
+require_command mvn
+prepare_java_home
+
+if [[ ! -f "$BACKEND_DIR/pom.xml" ]]; then
+  echo "Backend pom.xml not found at $BACKEND_DIR" >&2
+  exit 1
+fi
+
+if port_in_use 8080; then
+  if ! prompt_terminate_port 8080; then
+    exit 1
+  fi
+fi
+
+mkdir -p "$RUN_DIR"
+: > "$BACKEND_LOG"
+
+trap cleanup EXIT INT TERM
+
+echo "Running backend build with mvn clean install"
+(
+  cd "$BACKEND_DIR"
+  mvn clean install
+)
+echo "Backend build complete"
+
+(
+  cd "$BACKEND_DIR"
+  mvn spring-boot:run
+) >"$BACKEND_LOG" 2>&1 &
+BACKEND_PID=$!
+
+echo "Starting backend on http://localhost:8080"
+wait_for_url "$BACKEND_URL" "Backend"
+echo "Backend ready"
+echo "Backend is running. Press Ctrl+C to stop it."
+echo "Backend log: $BACKEND_LOG"
+
+wait "$BACKEND_PID"
