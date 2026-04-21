@@ -16,6 +16,7 @@ import {
   useChessboardSelector,
 } from '../state/ChessboardState'
 import ChessGameSetupModal from './ChessGameSetupModal'
+import ChessPromotionModal from './ChessPromotionModal'
 
 const CHESS_API_BASE_URL = import.meta.env.VITE_CHESS_API_BASE_URL ?? 'http://localhost:8080'
 
@@ -68,7 +69,7 @@ function extractNextFen(payload, currentFen) {
     : null
 }
 
-function requestNextMove({ fen, automatic = false }) {
+function requestNextMove({ fen, automatic = false, onMoveApplied }) {
   chessboardStore.dispatch(chessboardActions.setIsThinking(true))
   chessboardStore.dispatch(
     chessboardActions.setStatus(
@@ -107,15 +108,16 @@ function requestNextMove({ fen, automatic = false }) {
         chessboardActions.setLastMove(`${nextMoveResult.move.from}-${nextMoveResult.move.to}`),
       )
       chessboardStore.dispatch(
-        chessboardActions.setRequestBody(JSON.stringify({ fen: nextMoveResult.fen }, null, 2)),
-      )
-      chessboardStore.dispatch(
         chessboardActions.setStatus(
           automatic
             ? `Bot moved ${nextMoveResult.move.piece.toUpperCase()} from ${nextMoveResult.move.from} to ${nextMoveResult.move.to}.`
             : 'Applied the backend move to the board.',
         ),
       )
+      chessboardStore.dispatch(
+        chessboardActions.setRequestBody(JSON.stringify({ fen: nextMoveResult.fen }, null, 2)),
+      )
+      onMoveApplied?.()
     })
 
 
@@ -153,37 +155,51 @@ export default function ChessboardPanel() {
   )
   const autoRequestedFenRef = useRef(null)
   const [selectedSquare, setSelectedSquare] = useState(null)
+  const [pendingPromotion, setPendingPromotion] = useState(null)
   const turn = fen.split(' ')[1]
   const turnColor = turn === 'w' ? 'white' : 'black'
   const isPlayersTurn = gameMode === 'bot' ? playerColor === turnColor : true
   const boardOrientation = gameMode === 'two-player' ? turnColor : playerColor
+  const [lastMoveFrom, lastMoveTo] = lastMove ? lastMove.split('-') : []
+  const createLightBlueHighlight = () => ({
+    backgroundColor: 'rgba(102, 191, 255, 0.38)',
+  })
   const selectedSquareMoves = selectedSquare
     ? safeGameFromFen(fen).moves({ square: selectedSquare, verbose: true })
     : []
-  const customSquareStyles = selectedSquare
-    ? selectedSquareMoves.reduce(
-        (styles, move) => {
-          styles[move.to] = move.captured
-            ? {
-                background:
-                  'radial-gradient(circle, rgba(186, 58, 44, 0.22) 0%, rgba(186, 58, 44, 0.22) 58%, rgba(186, 58, 44, 0.72) 58%, rgba(186, 58, 44, 0.72) 72%, transparent 72%)',
-              }
-            : {
-                background:
-                  'radial-gradient(circle, rgba(31, 91, 77, 0.34) 0%, rgba(31, 91, 77, 0.34) 22%, transparent 24%)',
-              }
-          return styles
+  const customSquareStyles = selectedSquareMoves.reduce(
+    (styles, move) => {
+      return {
+        ...styles,
+        [move.to]: {
+          ...styles[move.to],
+          ...createLightBlueHighlight(),
         },
-        {
-          [selectedSquare]: {
-            backgroundColor: 'rgba(214, 178, 66, 0.45)',
-          },
-        },
-      )
-    : {}
+      }
+    },
+    {
+      ...(lastMoveFrom
+        ? {
+            [lastMoveFrom]: createLightBlueHighlight(),
+          }
+        : {}),
+      ...(lastMoveTo
+        ? {
+            [lastMoveTo]: createLightBlueHighlight(),
+          }
+        : {}),
+      ...(selectedSquare
+        ? {
+            [selectedSquare]: {
+              backgroundColor: 'rgba(214, 178, 66, 0.45)',
+            },
+          }
+        : {}),
+    },
+  )
 
   function canControlPiece(piece) {
-    if (setupOpen || isThinking || !piece) {
+    if (setupOpen || isThinking || pendingPromotion || !piece) {
       return false
     }
 
@@ -196,8 +212,22 @@ export default function ChessboardPanel() {
     return pieceColor === turnColor
   }
 
-  function applyMove(sourceSquare, targetSquare) {
-    if (!targetSquare || !isPlayersTurn) {
+  function getPromotionMove(sourceSquare, targetSquare) {
+    if (!sourceSquare || !targetSquare) {
+      return null
+    }
+
+    const candidateMoves = safeGameFromFen(fen).moves({ square: sourceSquare, verbose: true })
+
+    return (
+      candidateMoves.find(
+        (move) => move.from === sourceSquare && move.to === targetSquare && move.promotion,
+      ) ?? null
+    )
+  }
+
+  function commitMove(sourceSquare, targetSquare, promotion) {
+    if (!sourceSquare || !targetSquare || !isPlayersTurn) {
       return false
     }
 
@@ -205,7 +235,7 @@ export default function ChessboardPanel() {
     const move = nextGame.move({
       from: sourceSquare,
       to: targetSquare,
-      promotion: 'q',
+      ...(promotion ? { promotion } : {}),
     })
 
     if (!move) {
@@ -223,19 +253,57 @@ export default function ChessboardPanel() {
     )
     chessboardStore.dispatch(
       chessboardActions.setStatus(
-        `Moved ${move.piece.toUpperCase()} from ${move.from} to ${move.to}.`,
+        move.promotion
+          ? `Moved ${move.piece.toUpperCase()} from ${move.from} to ${move.to} and promoted to ${move.promotion.toUpperCase()}.`
+          : `Moved ${move.piece.toUpperCase()} from ${move.from} to ${move.to}.`,
       ),
     )
     setSelectedSquare(null)
+    setPendingPromotion(null)
 
     return true
+  }
+
+  function applyMove(sourceSquare, targetSquare) {
+    if (!targetSquare || !isPlayersTurn || pendingPromotion) {
+      return false
+    }
+
+    const promotionMove = getPromotionMove(sourceSquare, targetSquare)
+
+    if (promotionMove) {
+      setPendingPromotion({
+        from: sourceSquare,
+        to: targetSquare,
+      })
+      setSelectedSquare(null)
+      chessboardStore.dispatch(
+        chessboardActions.setStatus('Choose a piece for pawn promotion.'),
+      )
+      return false
+    }
+
+    return commitMove(sourceSquare, targetSquare)
+  }
+
+  function handlePromotionClose() {
+    setPendingPromotion(null)
+    chessboardStore.dispatch(chessboardActions.setStatus('Promotion canceled.'))
+  }
+
+  function handlePromotionSelect(promotion) {
+    if (!pendingPromotion) {
+      return
+    }
+
+    commitMove(pendingPromotion.from, pendingPromotion.to, promotion)
   }
 
   const boardOptions = {
     position: fen.split(' ')[0],
     boardOrientation,
-    allowDragging: !setupOpen && !isThinking,
-    customSquareStyles,
+    allowDragging: !setupOpen && !isThinking && !pendingPromotion,
+    squareStyles: customSquareStyles,
     canDragPiece: ({ piece }) => {
       return canControlPiece(piece?.pieceType)
     },
@@ -246,7 +314,7 @@ export default function ChessboardPanel() {
       const square =
         typeof squareOrEvent === 'string' ? squareOrEvent : squareOrEvent?.square
 
-      if (!square || setupOpen || isThinking || !isPlayersTurn) {
+      if (!square || setupOpen || isThinking || pendingPromotion || !isPlayersTurn) {
         return
       }
 
@@ -285,10 +353,6 @@ export default function ChessboardPanel() {
   }
 
   useEffect(() => {
-    setSelectedSquare(null)
-  }, [fen, setupOpen])
-
-  useEffect(() => {
     if (setupOpen) {
       autoRequestedFenRef.current = null
       return
@@ -303,11 +367,19 @@ export default function ChessboardPanel() {
     }
 
     autoRequestedFenRef.current = fen
-    requestNextMove({fen, automatic: true});
-   }, [fen, gameMode, isPlayersTurn, isThinking, setupOpen])
+    requestNextMove({
+      fen,
+      automatic: true,
+      onMoveApplied: () => {
+        setSelectedSquare(null)
+        setPendingPromotion(null)
+      },
+    })
+  }, [fen, gameMode, isPlayersTurn, isThinking, setupOpen])
 
   function resetBoard() {
     autoRequestedFenRef.current = null
+    setPendingPromotion(null)
     chessboardStore.dispatch(chessboardActions.resetChessboard())
   }
 
@@ -317,6 +389,7 @@ export default function ChessboardPanel() {
     }
 
     autoRequestedFenRef.current = null
+    setPendingPromotion(null)
     chessboardStore.dispatch(chessboardActions.resetChessboard())
     chessboardStore.dispatch(chessboardActions.setGameMode(gameMode))
     chessboardStore.dispatch(chessboardActions.setPlayerColor(playerColor))
@@ -344,6 +417,11 @@ export default function ChessboardPanel() {
         }}
         onStart={startGame}
       />
+      <ChessPromotionModal
+        open={Boolean(pendingPromotion)}
+        onClose={handlePromotionClose}
+        onSelect={handlePromotionSelect}
+      />
 
       <Grid container spacing={{ xs: 2, md: 3 }}>
         <Grid size={12}>
@@ -363,7 +441,15 @@ export default function ChessboardPanel() {
               <Button
                 fullWidth
                 variant="contained"
-                onClick={() => requestNextMove({ fen })}
+                onClick={() =>
+                  requestNextMove({
+                    fen,
+                    onMoveApplied: () => {
+                      setSelectedSquare(null)
+                      setPendingPromotion(null)
+                    },
+                  })
+                }
                 disabled={isThinking || setupOpen || (gameMode === 'bot' && isPlayersTurn)}
                 sx={{
                   minHeight: 52,
