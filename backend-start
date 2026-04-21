@@ -126,8 +126,7 @@ echo "Backend build complete"
 (
   cd "$BACKEND_DIR"
   mvn spring-boot:run
-) >"$BACKEND_LOG" 2>&1 &
-BACKEND_PID=$!
+)
 
 echo "Starting backend on http://localhost:8080"
 wait_for_url "$BACKEND_URL" "Backend"
