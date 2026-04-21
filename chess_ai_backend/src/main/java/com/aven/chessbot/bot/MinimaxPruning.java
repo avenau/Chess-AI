@@ -20,14 +20,16 @@ import java.util.List;
  */
 public class MinimaxPruning implements ChessBot {
     private static final int MAX_SEARCH_DEPTH = 128;
-    private final long TIME_LIMIT = 15000;
-    public Side side;
-    private int nodeCount;
-    private Move bestNextMove;
+    private static final int NULL_MOVE_REDUCTION = 2;
+    private static final int NULL_MOVE_MIN_REMAINING_DEPTH = NULL_MOVE_REDUCTION + 2;
+    private final long TIME_LIMIT = 20000;
     private final Heuristic heuristic;
     private final HashMap<Long, TranspositionEntry> transpositionTable;
     private final Move[][] killerMoves;
     private final int[][][] historyHeuristic;
+    public Side side;
+    private int nodeCount;
+    private Move bestNextMove;
     private long startTime;
     private long firstStartTime;
     private long maxDepth;
@@ -89,7 +91,7 @@ public class MinimaxPruning implements ChessBot {
         while (this.startTime <= this.endTime) {
             System.out.println("info: Searching depth " + depth);
             try {
-                minimax(0, depth, Integer.MIN_VALUE, Integer.MAX_VALUE, board);
+                minimax(0, depth, Integer.MIN_VALUE, Integer.MAX_VALUE, board, true);
             } catch (InterruptedException e) {
                 System.out.println("info: Search interrupted due to time limit");
                 break;
@@ -113,16 +115,17 @@ public class MinimaxPruning implements ChessBot {
     /**
      * The minimax algorthim
      *
-     * @param depth The depth that the algorithm is currently running
-     * @param boundDepth The max depth that the algorithm will go to
-     * @param alpha The maximum board score (First call of minimax alpha should be Integer.MIN)
-     * @param beta The minimum board score (First call of minimax alpha should be Integer.MAX)
-     * @param board The board you want to evaluate and get the score of
+     * @param depth         The depth that the algorithm is currently running
+     * @param boundDepth    The max depth that the algorithm will go to
+     * @param alpha         The maximum board score (First call of minimax alpha should be Integer.MIN)
+     * @param beta          The minimum board score (First call of minimax alpha should be Integer.MAX)
+     * @param board         The board you want to evaluate and get the score of
+     * @param allowNullMove Whether null move pruning can be attempted at this node
      * @return The highest board evaluated score
      * @throws MoveGeneratorException
      * @throws InterruptedException
      */
-    int minimax(int depth, int boundDepth, int alpha, int beta, Board board)
+    int minimax(int depth, int boundDepth, int alpha, int beta, Board board, boolean allowNullMove)
             throws MoveGeneratorException, InterruptedException {
 
         if (System.currentTimeMillis() >= endTime) {
@@ -153,6 +156,12 @@ public class MinimaxPruning implements ChessBot {
             return heuristic.calculateScore(board, depth);
         }
 
+        Integer nullMoveCutoff =
+                tryNullMovePruning(depth, boundDepth, alpha, beta, board, positionKey, entry, allowNullMove);
+        if (nullMoveCutoff != null) {
+            return nullMoveCutoff;
+        }
+
         List<Move> moveList = MoveGenerator.generateLegalMoves(board);
         if (moveList.isEmpty()) {
             return heuristic.calculateScore(board, depth);
@@ -167,7 +176,7 @@ public class MinimaxPruning implements ChessBot {
                         killerMoves,
                         historyHeuristic);
 
-        if (board.getSideToMove().value().equalsIgnoreCase(this.side.value())) {
+        if (board.getSideToMove() == this.side) {
             Move bestMove = null;
             int originalAlpha = alpha;
             int originalBeta = beta;
@@ -175,7 +184,7 @@ public class MinimaxPruning implements ChessBot {
             for (Move temp : moveList) {
                 board.doMove(temp);
                 nodeCount++;
-                int currentScore = minimax(depth + 1, boundDepth, alpha, beta, board);
+                int currentScore = minimax(depth + 1, boundDepth, alpha, beta, board, true);
                 board.undoMove();
 
                 if (currentScore > alpha) {
@@ -214,7 +223,7 @@ public class MinimaxPruning implements ChessBot {
         for (Move temp : moveList) {
             board.doMove(temp);
             nodeCount++;
-            int currentScore = minimax(depth + 1, boundDepth, alpha, beta, board);
+            int currentScore = minimax(depth + 1, boundDepth, alpha, beta, board, true);
             board.undoMove();
 
             if (currentScore < beta) {
@@ -241,6 +250,102 @@ public class MinimaxPruning implements ChessBot {
                 positionKey, new TranspositionEntry(beta, boundDepth - depth, flag, bestMove));
         return beta;
     }
+
+    // ===================== NULL PRUNING ============================
+    private Integer tryNullMovePruning(
+            int depth,
+            int boundDepth,
+            int alpha,
+            int beta,
+            Board board,
+            long positionKey,
+            TranspositionEntry entry,
+            boolean allowNullMove)
+            throws MoveGeneratorException, InterruptedException {
+        int remainingDepth = boundDepth - depth;
+        if (!allowNullMove
+                || depth == 0
+                || remainingDepth < NULL_MOVE_MIN_REMAINING_DEPTH
+                || board.isKingAttacked()
+                || !hasNonPawnMaterial(board, board.getSideToMove())) {
+            return null;
+        }
+
+        boolean maximizingNode = board.getSideToMove() == this.side;
+        System.out.println("Info: Trying null move at depth " + depth + " with remaining depth " + remainingDepth + " and side " + (maximizingNode ? "maximizing" : "minimizing") + " node.");
+        board.doNullMove();
+        nodeCount++;
+
+        int nullMoveScore;
+        try {
+            nullMoveScore =
+                    maximizingNode
+                            ? minimax(
+                            depth + NULL_MOVE_REDUCTION + 1,
+                            boundDepth,
+                            decrementWithoutOverflow(beta),
+                            beta,
+                            board,
+                            false)
+                            : minimax(
+                            depth + NULL_MOVE_REDUCTION + 1,
+                            boundDepth,
+                            alpha,
+                            incrementWithoutOverflow(alpha),
+                            board,
+                            false);
+        } finally {
+            board.undoMove();
+        }
+
+        if (maximizingNode && nullMoveScore >= beta) {
+            transpositionTable.put(
+                    positionKey,
+                    new TranspositionEntry(
+                            beta,
+                            remainingDepth,
+                            TranspositionEntry.LOWERBOUND,
+                            entry != null ? entry.getBestMove() : null));
+            return beta;
+        }
+
+        if (!maximizingNode && nullMoveScore <= alpha) {
+            transpositionTable.put(
+                    positionKey,
+                    new TranspositionEntry(
+                            alpha,
+                            remainingDepth,
+                            TranspositionEntry.UPPERBOUND,
+                            entry != null ? entry.getBestMove() : null));
+            return alpha;
+        }
+
+        return null;
+    }
+
+    private boolean hasNonPawnMaterial(Board board, Side sideToMove) {
+        long minorMajorMaterial =
+                sideToMove == Side.WHITE
+                        ? board.getBitboard(Piece.WHITE_KNIGHT)
+                          | board.getBitboard(Piece.WHITE_BISHOP)
+                          | board.getBitboard(Piece.WHITE_ROOK)
+                          | board.getBitboard(Piece.WHITE_QUEEN)
+                        : board.getBitboard(Piece.BLACK_KNIGHT)
+                          | board.getBitboard(Piece.BLACK_BISHOP)
+                          | board.getBitboard(Piece.BLACK_ROOK)
+                          | board.getBitboard(Piece.BLACK_QUEEN);
+        return minorMajorMaterial != 0L;
+    }
+
+    private int decrementWithoutOverflow(int value) {
+        return value == Integer.MIN_VALUE ? Integer.MIN_VALUE : value - 1;
+    }
+
+    private int incrementWithoutOverflow(int value) {
+        return value == Integer.MAX_VALUE ? Integer.MAX_VALUE : value + 1;
+    }
+
+    // ===================== NULL PRUNING ============================
 
     private void clearMoveOrderingState() {
         for (int ply = 0; ply < killerMoves.length; ply++) {
