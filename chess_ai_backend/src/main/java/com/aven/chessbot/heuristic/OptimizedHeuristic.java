@@ -27,8 +27,8 @@ import com.github.bhlangonijr.chesslib.move.MoveGeneratorException;
  */
 public class OptimizedHeuristic implements Heuristic {
 
-  private static final int CHECKMATE_SCORE = 100_000_000;
   private static final int EARLY_GAME_MOBILITY_LIMIT = 20;
+  private static final boolean USE_MOBILITY = false;
 
   private static final int[] PAWN_TABLE = {
     0, 0, 0, 0, 0, 0, 0, 0,
@@ -115,11 +115,6 @@ public class OptimizedHeuristic implements Heuristic {
 
   @Override
   public int calculateScore(Board board, int depth) throws MoveGeneratorException {
-    int terminalScore = evaluateTerminal(board, depth);
-    if (terminalScore != Integer.MIN_VALUE) {
-      return terminalScore;
-    }
-
     int whiteMaterial = 0;
     int blackMaterial = 0;
     int whitePositional = 0;
@@ -212,7 +207,7 @@ public class OptimizedHeuristic implements Heuristic {
     whiteScore += castleScore(board, Side.WHITE);
     blackScore += castleScore(board, Side.BLACK);
 
-    if (board.getMoveCounter() < EARLY_GAME_MOBILITY_LIMIT) {
+    if (USE_MOBILITY && board.getMoveCounter() < EARLY_GAME_MOBILITY_LIMIT) {
       int mobilityScore = mobilityScore(board);
       if (side == Side.WHITE) {
         whiteScore += mobilityScore;
@@ -225,29 +220,28 @@ public class OptimizedHeuristic implements Heuristic {
     return side == Side.WHITE ? perspectiveScore : -perspectiveScore;
   }
 
-  private int evaluateTerminal(Board board, int depth) {
-    if (board.isMated()) {
-      return board.getSideToMove() == side ? -CHECKMATE_SCORE + depth : CHECKMATE_SCORE - depth;
-    }
-
-    if (board.isDraw() || board.isStaleMate()) {
-      return 0;
-    }
-
-    return Integer.MIN_VALUE;
-  }
-
   private int mobilityScore(Board board) throws MoveGeneratorException {
     int currentMoves = MoveGenerator.generateLegalMoves(board).size();
+    int enemyMoves;
 
-    String fen = board.getFen();
-    String[] fenParts = fen.split(" ");
-    fenParts[1] = board.getSideToMove() == Side.WHITE ? "b" : "w";
+    if (board.getEnPassant() == Square.NONE) {
+      board.doNullMove();
+      try {
+        enemyMoves = MoveGenerator.generateLegalMoves(board).size();
+      } finally {
+        board.undoMove();
+      }
+    } else {
+      // Keep en passant mobility exact when a null move would clear the target square.
+      String fen = board.getFen();
+      String[] fenParts = fen.split(" ");
+      fenParts[1] = board.getSideToMove() == Side.WHITE ? "b" : "w";
 
-    Board enemyBoard = new Board();
-    enemyBoard.loadFromFen(String.join(" ", fenParts));
+      Board enemyBoard = new Board();
+      enemyBoard.loadFromFen(String.join(" ", fenParts));
+      enemyMoves = MoveGenerator.generateLegalMoves(enemyBoard).size();
+    }
 
-    int enemyMoves = MoveGenerator.generateLegalMoves(enemyBoard).size();
     int mobilityDelta = currentMoves - enemyMoves;
 
     if (board.getSideToMove() != side) {
@@ -335,10 +329,10 @@ public class OptimizedHeuristic implements Heuristic {
     Piece bishop = kingSide == Side.WHITE ? Piece.WHITE_BISHOP : Piece.BLACK_BISHOP;
     Piece knight = kingSide == Side.WHITE ? Piece.WHITE_KNIGHT : Piece.BLACK_KNIGHT;
 
-    int queenCount = board.getPieceLocation(queen).size();
-    int rookCount = board.getPieceLocation(rook).size();
-    int bishopCount = board.getPieceLocation(bishop).size();
-    int knightCount = board.getPieceLocation(knight).size();
+    int queenCount = Long.bitCount(board.getBitboard(queen));
+    int rookCount = Long.bitCount(board.getBitboard(rook));
+    int bishopCount = Long.bitCount(board.getBitboard(bishop));
+    int knightCount = Long.bitCount(board.getBitboard(knight));
 
     int nonPawnMaterial = queenCount * 900 + rookCount * 500 + bishopCount * 330 + knightCount * 320;
     return nonPawnMaterial <= 1300;

@@ -3,9 +3,10 @@ package com.aven.chessbot.bot;
 import com.aven.chessbot.util.ChessUtil;
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.Piece;
+import com.github.bhlangonijr.chesslib.PieceType;
+import com.github.bhlangonijr.chesslib.Square;
 import com.github.bhlangonijr.chesslib.move.Move;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -16,12 +17,16 @@ import java.util.Map;
  * piece that is doing the capturing)
  */
 class CaptureValueMoveComparator implements Comparator<Move> {
+    private static final int TT_MOVE_SCORE = 2_000_000;
     private static final int PV_MOVE_SCORE = 900_000;
-    private static final int PROMOTION_SCORE = 800_000;
-    private static final int CAPTURE_SCORE = 700_000;
-    private static final int KILLER_MOVE_1_SCORE = 500_000;
-    private static final int KILLER_MOVE_2_SCORE = 490_000;
-    private static final int HISTORY_SCORE_BASE = 100_000;
+    private static final int WINNING_PROMOTION_SCORE = 800_000;
+    private static final int WINNING_CAPTURE_SCORE = 700_000;
+    private static final int LOSING_PROMOTION_SCORE = 400_000;
+    private static final int LOSING_CAPTURE_SCORE = 300_000;
+    private static final int KILLER_MOVE_1_SCORE = 600_000;
+    private static final int KILLER_MOVE_2_SCORE = 590_000;
+    private static final int HISTORY_SCORE_BASE = 500_000;
+    private static final int HISTORY_SCORE_CAP = 50_000;
 
     private final Board compareBoard;
     private final Map<Move, Integer> moveScores;
@@ -39,57 +44,13 @@ class CaptureValueMoveComparator implements Comparator<Move> {
             Move pvMove,
             Move[][] killerMoves,
             int[][][] historyHeuristic) {
-        List<Move> orderedMoves = new ArrayList<>(moveList.size());
-        List<Move> tacticalMoves = new ArrayList<>();
-        List<Move> killerQuietMoves = new ArrayList<>();
-        List<Move> historyMoves = new ArrayList<>();
-        List<Move> losingCaptures = new ArrayList<>();
         Map<Move, Integer> moveScores = new HashMap<>(Math.max(16, moveList.size() * 2));
-        Move prioritizedTtMove = null;
-
         for (Move move : moveList) {
-            if (ttMove != null && ttMove.equals(move)) {
-                prioritizedTtMove = move;
-                continue;
-            }
-
-            int score = scoreMove(board, move, depth, pvMove, killerMoves, historyHeuristic);
-            moveScores.put(move, score);
-
-            if (isPromotion(move)) {
-                tacticalMoves.add(move);
-                continue;
-            }
-
-            if (isCapture(board, move)) {
-                if (captureDelta(board, move) >= 0) {
-                    tacticalMoves.add(move);
-                } else {
-                    losingCaptures.add(move);
-                }
-                continue;
-            }
-
-            if (isKillerMove(depth, move, killerMoves)) {
-                killerQuietMoves.add(move);
-            } else {
-                historyMoves.add(move);
-            }
+            moveScores.put(move, scoreMove(board, move, depth, ttMove, pvMove, killerMoves, historyHeuristic));
         }
 
         CaptureValueMoveComparator comparator = new CaptureValueMoveComparator(board, moveScores);
-        tacticalMoves.sort(comparator);
-        killerQuietMoves.sort(comparator);
-        historyMoves.sort(comparator);
-        losingCaptures.sort(comparator);
-
-        if (prioritizedTtMove != null) {
-            orderedMoves.add(prioritizedTtMove);
-        }
-        orderedMoves.addAll(tacticalMoves);
-        orderedMoves.addAll(killerQuietMoves);
-        orderedMoves.addAll(historyMoves);
-        orderedMoves.addAll(losingCaptures);
+        List<Move> orderedMoves = moveList.stream().sorted(comparator).toList();
         return orderedMoves;
     }
 
@@ -112,37 +73,52 @@ class CaptureValueMoveComparator implements Comparator<Move> {
         return attackerPieceValueMove - attackerPieceValueT1;
     }
 
-    private static int scoreMove(
+    static int scoreMove(
             Board board,
             Move move,
             int depth,
+            Move ttMove,
             Move pvMove,
             Move[][] killerMoves,
             int[][][] historyHeuristic) {
+        if (ttMove != null && ttMove.equals(move)) {
+            return TT_MOVE_SCORE;
+        }
+
         if (depth == 0 && pvMove != null && pvMove.equals(move)) {
             return PV_MOVE_SCORE;
         }
 
-        int score = 0;
+        int score;
         Piece movingPiece = board.getPiece(move.getFrom());
-        Piece capturedPiece = board.getPiece(move.getTo());
+        Piece capturedPiece = getCapturedPiece(board, move);
+        int captureDelta = ChessUtil.getPieceValue(capturedPiece) - ChessUtil.getPieceValue(movingPiece);
+        boolean promotion = isPromotion(move);
+        boolean capture = capturedPiece != Piece.NONE;
 
-        if (isPromotion(move)) {
-            score += PROMOTION_SCORE + ChessUtil.getPieceValue(move.getPromotion());
+        if (promotion || capture) {
+            int tacticalBase =
+                    captureDelta >= 0
+                            ? promotion ? WINNING_PROMOTION_SCORE : WINNING_CAPTURE_SCORE
+                            : promotion ? LOSING_PROMOTION_SCORE : LOSING_CAPTURE_SCORE;
+            score = tacticalBase;
+            score += ChessUtil.getPieceValue(capturedPiece) * 16;
+            score -= ChessUtil.getPieceValue(movingPiece);
+            if (promotion) {
+                score += ChessUtil.getPieceValue(move.getPromotion());
+            }
+            return score;
         }
 
-        if (capturedPiece != null && capturedPiece != Piece.NONE) {
-            int captureDelta = ChessUtil.getPieceValue(capturedPiece) - ChessUtil.getPieceValue(movingPiece);
-            score += CAPTURE_SCORE + captureDelta;
-        } else if (isKillerMove(depth, move, killerMoves)) {
-            score += getKillerMoveScore(depth, move, killerMoves);
-        } else {
-            score += HISTORY_SCORE_BASE
-                    + historyHeuristic[board.getSideToMove().ordinal()][move.getFrom().ordinal()]
-                            [move.getTo().ordinal()];
+        if (isKillerMove(depth, move, killerMoves)) {
+            return getKillerMoveScore(depth, move, killerMoves);
         }
 
-        return score;
+        return HISTORY_SCORE_BASE
+                + Math.min(
+                        HISTORY_SCORE_CAP,
+                        historyHeuristic[board.getSideToMove().ordinal()][move.getFrom().ordinal()]
+                                [move.getTo().ordinal()]);
     }
 
     private static boolean isKillerMove(int depth, Move move, Move[][] killerMoves) {
@@ -166,14 +142,26 @@ class CaptureValueMoveComparator implements Comparator<Move> {
     }
 
     private static boolean isCapture(Board board, Move move) {
-        Piece capturedPiece = board.getPiece(move.getTo());
-        return capturedPiece != null && capturedPiece != Piece.NONE;
+        return getCapturedPiece(board, move) != Piece.NONE;
     }
 
-    private static int captureDelta(Board board, Move move) {
-        Piece movingPiece = board.getPiece(move.getFrom());
+    static Piece getCapturedPiece(Board board, Move move) {
         Piece capturedPiece = board.getPiece(move.getTo());
-        return ChessUtil.getPieceValue(capturedPiece) - ChessUtil.getPieceValue(movingPiece);
+        if (capturedPiece != null && capturedPiece != Piece.NONE) {
+            return capturedPiece;
+        }
+
+        Piece movingPiece = board.getPiece(move.getFrom());
+        if (movingPiece == null
+                || movingPiece == Piece.NONE
+                || movingPiece.getPieceType() != PieceType.PAWN
+                || move.getFrom().getFile() == move.getTo().getFile()
+                || board.getEnPassant() == Square.NONE
+                || move.getTo() != board.getEnPassant()) {
+            return Piece.NONE;
+        }
+
+        return board.getPiece(board.getEnPassantTarget());
     }
 
     private static boolean isPromotion(Move move) {

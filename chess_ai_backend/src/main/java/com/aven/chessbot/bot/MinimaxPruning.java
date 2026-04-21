@@ -1,8 +1,9 @@
 package com.aven.chessbot.bot;
 
 import com.aven.chessbot.components.TranspositionEntry;
+import com.aven.chessbot.components.TranspositionTable;
 import com.aven.chessbot.heuristic.Heuristic;
-import com.aven.chessbot.heuristic.StaticBoardEvaluation;
+import com.aven.chessbot.heuristic.OptimizedHeuristic;
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.Piece;
 import com.github.bhlangonijr.chesslib.Side;
@@ -10,7 +11,7 @@ import com.github.bhlangonijr.chesslib.move.Move;
 import com.github.bhlangonijr.chesslib.move.MoveGenerator;
 import com.github.bhlangonijr.chesslib.move.MoveGeneratorException;
 
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -20,11 +21,13 @@ import java.util.List;
  */
 public class MinimaxPruning implements ChessBot {
     private static final int MAX_SEARCH_DEPTH = 128;
+    private static final int CHECKMATE_SCORE = 100_000_000;
     private static final int NULL_MOVE_REDUCTION = 2;
     private static final int NULL_MOVE_MIN_REMAINING_DEPTH = NULL_MOVE_REDUCTION + 2;
-    private final long TIME_LIMIT = 20000;
+    private static final boolean LOG_SEARCH_INFO = true;
+    private final long TIME_LIMIT = 10000;
     private final Heuristic heuristic;
-    private final HashMap<Long, TranspositionEntry> transpositionTable;
+    private final TranspositionTable transpositionTable;
     private final Move[][] killerMoves;
     private final int[][][] historyHeuristic;
     public Side side;
@@ -43,8 +46,8 @@ public class MinimaxPruning implements ChessBot {
      */
     public MinimaxPruning(Side side) {
         this.side = side;
-        this.heuristic = new StaticBoardEvaluation(side);
-        this.transpositionTable = new HashMap<>();
+        this.heuristic = new OptimizedHeuristic(side);
+        this.transpositionTable = new TranspositionTable();
         this.killerMoves = new Move[MAX_SEARCH_DEPTH][2];
         this.historyHeuristic = new int[Side.values().length][64][64];
     }
@@ -86,14 +89,19 @@ public class MinimaxPruning implements ChessBot {
         this.startTime = System.currentTimeMillis();
         this.firstStartTime = System.currentTimeMillis();
         this.endTime = startTime + TIME_LIMIT;
-
-        System.out.println("Start: " + this.startTime + " End: " + this.endTime);
+        if (LOG_SEARCH_INFO) {
+            System.out.println("info: Calculating best move!");
+        }
         while (this.startTime <= this.endTime) {
-            System.out.println("info: Searching depth " + depth);
+            if (LOG_SEARCH_INFO) {
+                System.out.println("info: Searching at depth " + depth);
+            }
             try {
                 minimax(0, depth, Integer.MIN_VALUE, Integer.MAX_VALUE, board, true);
             } catch (InterruptedException e) {
-                System.out.println("info: Search interrupted due to time limit");
+                if (LOG_SEARCH_INFO) {
+                    System.out.println("info: Search interrupted due to time limit");
+                }
                 break;
             }
             depth++;
@@ -103,12 +111,14 @@ public class MinimaxPruning implements ChessBot {
             }
         }
 
-        System.out.println("info: Value " + this.maxValue);
-        System.out.println("info: Move " + (this.bestNextMove != null ? this.bestNextMove : "(none)"));
-        System.out.println("info Depth Searched: " + maxDepth);
-        System.out.println("info Number of Nodes Visited: " + nodeCount);
-        System.out.println(
-                "Time taken: " + (System.currentTimeMillis() - this.firstStartTime) / 1000 + " seconds");
+        if (LOG_SEARCH_INFO) {
+            System.out.println("info: Value " + this.maxValue);
+            System.out.println("info: Move " + (this.bestNextMove != null ? this.bestNextMove : "(none)"));
+            //System.out.println("info Depth Searched: " + maxDepth);
+            System.out.println("info Number of Nodes Visited: " + nodeCount);
+            System.out.println(
+                    "Time taken: " + (System.currentTimeMillis() - this.firstStartTime) / 1000 + " seconds");
+        }
         return bestNextMove;
     }
 
@@ -128,50 +138,54 @@ public class MinimaxPruning implements ChessBot {
     int minimax(int depth, int boundDepth, int alpha, int beta, Board board, boolean allowNullMove)
             throws MoveGeneratorException, InterruptedException {
 
-        if (System.currentTimeMillis() >= endTime) {
-            throw new InterruptedException("Time limit exceeded");
+        checkTimeLimit();
+        updateMaxDepth(depth);
+
+        if (isForcedDraw(board)) {
+            return 0;
+        }
+
+        int remainingDepth = boundDepth - depth;
+        if (remainingDepth <= 0) {
+            return quiescence(alpha, beta, board, depth);
         }
 
         long positionKey = board.getIncrementalHashKey();
-        TranspositionEntry entry = transpositionTable.get(positionKey);
-        if (entry != null && entry.getDepth() >= boundDepth - depth) {
-            if (entry.getFlag() == TranspositionEntry.EXACT) {
-                return entry.getScore();
+        int ttSlot = transpositionTable.findSlot(positionKey);
+        Move ttMove = ttSlot >= 0 ? transpositionTable.getBestMove(ttSlot) : null;
+        if (ttSlot >= 0 && transpositionTable.getDepth(ttSlot) >= remainingDepth) {
+            int ttScore = transpositionTable.getScore(ttSlot);
+            byte ttFlag = transpositionTable.getFlag(ttSlot);
+            if (ttFlag == TranspositionEntry.EXACT) {
+                return ttScore;
             }
-            if (entry.getFlag() == TranspositionEntry.LOWERBOUND && entry.getScore() > alpha) {
-                alpha = entry.getScore();
+            if (ttFlag == TranspositionEntry.LOWERBOUND && ttScore > alpha) {
+                alpha = ttScore;
             }
-            if (entry.getFlag() == TranspositionEntry.UPPERBOUND && entry.getScore() < beta) {
-                beta = entry.getScore();
+            if (ttFlag == TranspositionEntry.UPPERBOUND && ttScore < beta) {
+                beta = ttScore;
             }
             if (alpha >= beta) {
-                return entry.getScore();
+                return ttScore;
             }
-        }
-
-        if (depth == boundDepth || board.isDraw() || board.isMated() || board.isStaleMate()) {
-            if (depth > maxDepth) {
-                maxDepth = depth;
-            }
-            return heuristic.calculateScore(board, depth);
         }
 
         Integer nullMoveCutoff =
-                tryNullMovePruning(depth, boundDepth, alpha, beta, board, positionKey, entry, allowNullMove);
+                tryNullMovePruning(depth, boundDepth, alpha, beta, board, positionKey, ttMove, allowNullMove);
         if (nullMoveCutoff != null) {
             return nullMoveCutoff;
         }
 
         List<Move> moveList = MoveGenerator.generateLegalMoves(board);
         if (moveList.isEmpty()) {
-            return heuristic.calculateScore(board, depth);
+            return evaluateNoLegalMoves(board, depth);
         }
-        moveList =
-                CaptureValueMoveComparator.orderMoves(
+        MovePicker movePicker =
+                new MovePicker(
                         board,
                         moveList,
                         depth,
-                        entry != null ? entry.getBestMove() : null,
+                        ttMove,
                         bestNextMove,
                         killerMoves,
                         historyHeuristic);
@@ -180,12 +194,30 @@ public class MinimaxPruning implements ChessBot {
             Move bestMove = null;
             int originalAlpha = alpha;
             int originalBeta = beta;
+            boolean firstMove = true;
 
-            for (Move temp : moveList) {
+            for (int moveIndex = 0; moveIndex < movePicker.size(); moveIndex++) {
+                Move temp = movePicker.pickNextMove(moveIndex);
                 board.doMove(temp);
                 nodeCount++;
-                int currentScore = minimax(depth + 1, boundDepth, alpha, beta, board, true);
+                int currentScore;
+                if (firstMove) {
+                    currentScore = minimax(depth + 1, boundDepth, alpha, beta, board, true);
+                } else {
+                    currentScore =
+                            minimax(
+                                    depth + 1,
+                                    boundDepth,
+                                    alpha,
+                                    incrementWithoutOverflow(alpha),
+                                    board,
+                                    true);
+                    if (currentScore > alpha && currentScore < beta) {
+                        currentScore = minimax(depth + 1, boundDepth, alpha, beta, board, true);
+                    }
+                }
                 board.undoMove();
+                firstMove = false;
 
                 if (currentScore > alpha) {
                     alpha = currentScore;
@@ -194,10 +226,12 @@ public class MinimaxPruning implements ChessBot {
                 if (alpha >= beta) {
                     recordKillerMove(depth, temp, board);
                     recordHistoryMove(board.getSideToMove(), temp, boundDepth - depth);
-                    transpositionTable.put(
+                    transpositionTable.store(
                             positionKey,
-                            new TranspositionEntry(
-                                    alpha, boundDepth - depth, TranspositionEntry.LOWERBOUND, bestMove));
+                            alpha,
+                            remainingDepth,
+                            TranspositionEntry.LOWERBOUND,
+                            bestMove);
                     break;
                 }
             }
@@ -206,8 +240,7 @@ public class MinimaxPruning implements ChessBot {
                     alpha <= originalAlpha
                             ? TranspositionEntry.UPPERBOUND
                             : alpha >= originalBeta ? TranspositionEntry.LOWERBOUND : TranspositionEntry.EXACT;
-            transpositionTable.put(
-                    positionKey, new TranspositionEntry(alpha, boundDepth - depth, flag, bestMove));
+            transpositionTable.store(positionKey, alpha, remainingDepth, flag, bestMove);
 
             if (depth == 0) {
                 bestNextMove = bestMove;
@@ -219,12 +252,30 @@ public class MinimaxPruning implements ChessBot {
         Move bestMove = null;
         int originalAlpha = alpha;
         int originalBeta = beta;
+        boolean firstMove = true;
 
-        for (Move temp : moveList) {
+        for (int moveIndex = 0; moveIndex < movePicker.size(); moveIndex++) {
+            Move temp = movePicker.pickNextMove(moveIndex);
             board.doMove(temp);
             nodeCount++;
-            int currentScore = minimax(depth + 1, boundDepth, alpha, beta, board, true);
+            int currentScore;
+            if (firstMove) {
+                currentScore = minimax(depth + 1, boundDepth, alpha, beta, board, true);
+            } else {
+                currentScore =
+                        minimax(
+                                depth + 1,
+                                boundDepth,
+                                decrementWithoutOverflow(beta),
+                                beta,
+                                board,
+                                true);
+                if (currentScore > alpha && currentScore < beta) {
+                    currentScore = minimax(depth + 1, boundDepth, alpha, beta, board, true);
+                }
+            }
             board.undoMove();
+            firstMove = false;
 
             if (currentScore < beta) {
                 beta = currentScore;
@@ -234,10 +285,12 @@ public class MinimaxPruning implements ChessBot {
             if (alpha >= beta) {
                 recordKillerMove(depth, temp, board);
                 recordHistoryMove(board.getSideToMove(), temp, boundDepth - depth);
-                transpositionTable.put(
+                transpositionTable.store(
                         positionKey,
-                        new TranspositionEntry(
-                                beta, boundDepth - depth, TranspositionEntry.UPPERBOUND, bestMove));
+                        beta,
+                        remainingDepth,
+                        TranspositionEntry.UPPERBOUND,
+                        bestMove);
                 break;
             }
         }
@@ -246,8 +299,89 @@ public class MinimaxPruning implements ChessBot {
                 beta <= originalAlpha
                         ? TranspositionEntry.UPPERBOUND
                         : beta >= originalBeta ? TranspositionEntry.LOWERBOUND : TranspositionEntry.EXACT;
-        transpositionTable.put(
-                positionKey, new TranspositionEntry(beta, boundDepth - depth, flag, bestMove));
+        transpositionTable.store(positionKey, beta, remainingDepth, flag, bestMove);
+        return beta;
+    }
+
+    private int quiescence(int alpha, int beta, Board board, int depth)
+            throws MoveGeneratorException, InterruptedException {
+        checkTimeLimit();
+        updateMaxDepth(depth);
+
+        if (isForcedDraw(board)) {
+            return 0;
+        }
+
+        boolean maximizingNode = board.getSideToMove() == this.side;
+        boolean inCheck = board.isKingAttacked();
+        int standPat = 0;
+
+        if (!inCheck) {
+            standPat = heuristic.calculateScore(board, depth);
+            if (maximizingNode) {
+                if (standPat >= beta) {
+                    return beta;
+                }
+                if (standPat > alpha) {
+                    alpha = standPat;
+                }
+            } else {
+                if (standPat <= alpha) {
+                    return alpha;
+                }
+                if (standPat < beta) {
+                    beta = standPat;
+                }
+            }
+        }
+
+        List<Move> moveList = MoveGenerator.generateLegalMoves(board);
+        if (moveList.isEmpty()) {
+            return evaluateNoLegalMoves(board, depth);
+        }
+
+        if (!inCheck) {
+            moveList = filterTacticalMoves(board, moveList);
+            if (moveList.isEmpty()) {
+                return standPat;
+            }
+        }
+
+        MovePicker movePicker =
+                new MovePicker(board, moveList, depth, null, null, killerMoves, historyHeuristic);
+
+        if (maximizingNode) {
+            for (int moveIndex = 0; moveIndex < movePicker.size(); moveIndex++) {
+                Move move = movePicker.pickNextMove(moveIndex);
+                board.doMove(move);
+                nodeCount++;
+                int score = quiescence(alpha, beta, board, depth + 1);
+                board.undoMove();
+
+                if (score > alpha) {
+                    alpha = score;
+                }
+                if (alpha >= beta) {
+                    return beta;
+                }
+            }
+            return alpha;
+        }
+
+        for (int moveIndex = 0; moveIndex < movePicker.size(); moveIndex++) {
+            Move move = movePicker.pickNextMove(moveIndex);
+            board.doMove(move);
+            nodeCount++;
+            int score = quiescence(alpha, beta, board, depth + 1);
+            board.undoMove();
+
+            if (score < beta) {
+                beta = score;
+            }
+            if (alpha >= beta) {
+                return alpha;
+            }
+        }
         return beta;
     }
 
@@ -259,7 +393,7 @@ public class MinimaxPruning implements ChessBot {
             int beta,
             Board board,
             long positionKey,
-            TranspositionEntry entry,
+            Move ttMove,
             boolean allowNullMove)
             throws MoveGeneratorException, InterruptedException {
         int remainingDepth = boundDepth - depth;
@@ -272,7 +406,7 @@ public class MinimaxPruning implements ChessBot {
         }
 
         boolean maximizingNode = board.getSideToMove() == this.side;
-        System.out.println("Info: Trying null move at depth " + depth + " with remaining depth " + remainingDepth + " and side " + (maximizingNode ? "maximizing" : "minimizing") + " node.");
+        //System.out.println("Info: Trying null move at depth " + depth + " with remaining depth " + remainingDepth + " and side " + (maximizingNode ? "maximizing" : "minimizing") + " node.");
         board.doNullMove();
         nodeCount++;
 
@@ -299,24 +433,22 @@ public class MinimaxPruning implements ChessBot {
         }
 
         if (maximizingNode && nullMoveScore >= beta) {
-            transpositionTable.put(
+            transpositionTable.store(
                     positionKey,
-                    new TranspositionEntry(
-                            beta,
-                            remainingDepth,
-                            TranspositionEntry.LOWERBOUND,
-                            entry != null ? entry.getBestMove() : null));
+                    beta,
+                    remainingDepth,
+                    TranspositionEntry.LOWERBOUND,
+                    ttMove);
             return beta;
         }
 
         if (!maximizingNode && nullMoveScore <= alpha) {
-            transpositionTable.put(
+            transpositionTable.store(
                     positionKey,
-                    new TranspositionEntry(
-                            alpha,
-                            remainingDepth,
-                            TranspositionEntry.UPPERBOUND,
-                            entry != null ? entry.getBestMove() : null));
+                    alpha,
+                    remainingDepth,
+                    TranspositionEntry.UPPERBOUND,
+                    ttMove);
             return alpha;
         }
 
@@ -335,6 +467,39 @@ public class MinimaxPruning implements ChessBot {
                           | board.getBitboard(Piece.BLACK_ROOK)
                           | board.getBitboard(Piece.BLACK_QUEEN);
         return minorMajorMaterial != 0L;
+    }
+
+    private boolean isForcedDraw(Board board) {
+        return board.isRepetition() || board.isInsufficientMaterial() || board.getHalfMoveCounter() >= 100;
+    }
+
+    private int evaluateNoLegalMoves(Board board, int depth) {
+        if (board.isKingAttacked()) {
+            return board.getSideToMove() == side ? -CHECKMATE_SCORE + depth : CHECKMATE_SCORE - depth;
+        }
+        return 0;
+    }
+
+    private List<Move> filterTacticalMoves(Board board, List<Move> moveList) {
+        List<Move> tacticalMoves = new ArrayList<>();
+        for (Move move : moveList) {
+            if (isPromotion(move) || isCapture(board, move)) {
+                tacticalMoves.add(move);
+            }
+        }
+        return tacticalMoves;
+    }
+
+    private void checkTimeLimit() throws InterruptedException {
+        if (System.currentTimeMillis() >= endTime) {
+            throw new InterruptedException("Time limit exceeded");
+        }
+    }
+
+    private void updateMaxDepth(int depth) {
+        if (depth > maxDepth) {
+            maxDepth = depth;
+        }
     }
 
     private int decrementWithoutOverflow(int value) {
@@ -379,8 +544,7 @@ public class MinimaxPruning implements ChessBot {
     }
 
     private boolean isCapture(Board board, Move move) {
-        Piece capturedPiece = board.getPiece(move.getTo());
-        return capturedPiece != null && capturedPiece != Piece.NONE;
+        return CaptureValueMoveComparator.getCapturedPiece(board, move) != Piece.NONE;
     }
 
     private boolean isPromotion(Move move) {
