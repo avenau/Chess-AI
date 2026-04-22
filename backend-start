@@ -132,6 +132,5 @@ echo "Starting backend on http://localhost:8080"
 wait_for_url "$BACKEND_URL" "Backend"
 echo "Backend ready"
 echo "Backend is running. Press Ctrl+C to stop it."
-echo "Backend log: $BACKEND_LOG"
 
 wait "$BACKEND_PID"
